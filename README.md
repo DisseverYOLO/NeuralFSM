@@ -2,7 +2,6 @@
 
 This repository contains the **NeuralFSM** codebase for training and evaluating a **finite-state, task-conditioned multi-agent coordination** framework with a **Temporal Graph Network (TGN)** controller and an **optional dual-defense protection layer** (robustness under frequency/semantic attacks).
 
-> Note: To keep the repo lightweight, large artifacts are ignored by `.gitignore` (e.g., `datasets/`, `results/`, `paper/`, `docs/`).
 
 ## Project structure
 
