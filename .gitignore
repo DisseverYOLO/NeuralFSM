@@ -48,3 +48,7 @@ Desktop.ini
 .DS_Store
 
 tools/extensions/
+
+# --- Local secrets / configs (DO NOT COMMIT) ---
+config.yaml
+*.env

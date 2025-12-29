@@ -1,0 +1,12 @@
+### Example config (DO NOT PUT REAL KEYS HERE)
+### Copy to `config.yaml` locally (which is gitignored) and fill your secrets there.
+
+### For OpenAI / OpenRouter (OpenAI-compatible)
+# OPENAI_API_KEY: "YOUR_KEY_HERE"
+# OPENAI_API_BASE: "https://openrouter.ai/api/v1"
+
+### For Serper
+# SERPER_API_KEY: "YOUR_KEY_HERE"
+# SERPER_ENDPOINT: "https://google.serper.dev/search"
+
+

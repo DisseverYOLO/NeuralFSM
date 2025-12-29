@@ -54,7 +54,7 @@ OpenAI Python SDK
 #OPENAI_API_BASE: https://api.openai-proxy.org/v1
 
 ### For OpenRouter (OpenAI compatible) - 当前使用
-OPENAI_API_KEY: sk-REDACTED
+OPENAI_API_KEY: sk-or-v1-xxxxx
 OPENAI_API_BASE: https://openrouter.ai/api/v1
 
 ### For Azure OpenAI
@@ -63,7 +63,7 @@ AZURE_OPENAI_API_KEY:
 AZURE_OPENAI_API_BASE: 
 
 ### For Serper (网络搜索)
-SERPER_API_KEY: 1005592c05898cd38eb4b74d0fe9a03e0965d8c3
+SERPER_API_KEY: xxxxx
 SERPER_ENDPOINT: https://google.serper.dev/search
 
 ### For VLLM (本地部署)
@@ -121,9 +121,9 @@ $env:SERPER_ENDPOINT="https://google.serper.dev/search"
 ```bash
 #!/bin/bash
 export OPENAI_API_BASE=https://openrouter.ai/api/v1
-export OPENAI_API_KEY=sk-REDACTED
+export OPENAI_API_KEY=sk-or-v1-xxxxx
 export API_VERSION=2024-07-01-preview
-export SERPER_API_KEY=1005592c05898cd38eb4b74d0fe9a03e0965d8c3
+export SERPER_API_KEY=xxxxx
 export SERPER_ENDPOINT=https://google.serper.dev/search
 ```
 

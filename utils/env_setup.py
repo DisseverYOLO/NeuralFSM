@@ -2,8 +2,10 @@ import os
 import yaml
 
 def set_env_variables_from_yaml(yaml_file):
-    with open(yaml_file, 'r') as file:
-        config = yaml.safe_load(file)
+    if not os.path.isfile(yaml_file):
+        return
+    with open(yaml_file, 'r', encoding='utf-8') as file:
+        config = yaml.safe_load(file) or {}
         _set_env_variables(config)
 
 def _set_env_variables(config, prefix=''):
@@ -13,7 +15,9 @@ def _set_env_variables(config, prefix=''):
         else:
             env_var = prefix + key.upper()
             os.environ[env_var] = str(value)
-            print(f'Set environment variable {env_var}={value}')
+            # Do not print secret values.
+            print(f"Set environment variable {env_var}")
 
-# 使用示例
-set_env_variables_from_yaml('config.yaml')
+if __name__ == "__main__":
+    # Optional: load local config.yaml if present (config.yaml should be gitignored).
+    set_env_variables_from_yaml('config.yaml')

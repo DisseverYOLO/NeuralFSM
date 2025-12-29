@@ -1,7 +1,7 @@
 import os
 from openai import OpenAI, AzureOpenAI
 import json
-# export AZURE_OPENAI_API_KEY="d56bd868ff56401595c6e74357c02f04"
+# export AZURE_OPENAI_API_KEY="YOUR_KEY_HERE"
 # export AZURE_OPENAI_API_BASE="https://yaolun-west.openai.azure.com/"
 
 def _ensure_api_env_from_config():
@@ -34,12 +34,9 @@ class LLM():
         self.default_model = os.getenv("NEURALFSM_LLM_MODEL", "gpt-5-nano")
         if self.use_azure:
             self.client = AzureOpenAI(
-                api_key="d56bd868ff56401595c6e74357c02f04",
-                #os.getenv("AZURE_OPENAI_API_KEY"),
-                azure_endpoint="https://yaolun-west.openai.azure.com/",
-                #os.getenv("AZURE_OPENAI_API_BASE"),
-                api_version="2024-07-01-preview"
-                #os.getenv("API_VERSION")
+                api_key=os.getenv("AZURE_OPENAI_API_KEY"),
+                azure_endpoint=os.getenv("AZURE_OPENAI_API_BASE", "https://yaolun-west.openai.azure.com/"),
+                api_version=os.getenv("AZURE_OPENAI_API_VERSION", "2024-07-01-preview"),
             )
         else:
             self.client = OpenAI(
