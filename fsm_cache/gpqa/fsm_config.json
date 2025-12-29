@@ -1,0 +1,198 @@
+{
+  "states": [
+    {
+      "state_id": "0",
+      "state_name": "Problem Understanding & Parameter Extraction",
+      "agent_id": "0",
+      "instruction": "Parse the question to identify objective, constraints, units, and asked quantity; extract key parameters and boundary conditions.. Output format: complete your task and include completion marker.",
+      "completion_condition": "Output contains task completion marker or Problem Understanding & Parameter Extraction objectives met",
+      "is_initial": true,
+      "is_final": false,
+      "listeners": [
+        "1",
+        "2"
+      ]
+    },
+    {
+      "state_id": "1",
+      "state_name": "Concept Activation & Rule Recall",
+      "agent_id": "1",
+      "instruction": "Activate relevant domain concepts, formulas, and typical GPQA patterns that may apply to the problem.. Output format: complete your task and include completion marker.",
+      "completion_condition": "Output contains task completion marker or Concept Activation & Rule Recall objectives met",
+      "is_initial": false,
+      "is_final": false,
+      "listeners": [
+        "0",
+        "2",
+        "3"
+      ]
+    },
+    {
+      "state_id": "2",
+      "state_name": "Option Inventory & Mapping",
+      "agent_id": "2",
+      "instruction": "List all answer options and map each to a candidate reasoning class (e.g., correct, distractor, impossible, requiring condition).. Output format: complete your task and include completion marker.",
+      "completion_condition": "Output contains task completion marker or Option Inventory & Mapping objectives met",
+      "is_initial": false,
+      "is_final": false,
+      "listeners": [
+        "0",
+        "1",
+        "3",
+        "4"
+      ]
+    },
+    {
+      "state_id": "3",
+      "state_name": "Constraint Identification & Elimination Criteria",
+      "agent_id": "3",
+      "instruction": "Identify constraints, dependencies, and conditions that constrain validity; establish early elimination criteria.. Output format: complete your task and include completion marker.",
+      "completion_condition": "Output contains task completion marker or Constraint Identification & Elimination Criteria objectives met",
+      "is_initial": false,
+      "is_final": false,
+      "listeners": [
+        "1",
+        "2",
+        "4",
+        "5"
+      ]
+    },
+    {
+      "state_id": "4",
+      "state_name": "Option-by-Option Analysis",
+      "agent_id": "4",
+      "instruction": "Perform systematic, stepwise evaluation of each option against facts, formulas, and extracted constraints; record justifications.. Output format: complete your task and include completion marker.",
+      "completion_condition": "Output contains task completion marker or Option-by-Option Analysis objectives met",
+      "is_initial": false,
+      "is_final": false,
+      "listeners": [
+        "2",
+        "3",
+        "5",
+        "6"
+      ]
+    },
+    {
+      "state_id": "5",
+      "state_name": "Cross-check & Consistency Verification",
+      "agent_id": "5",
+      "instruction": "Perform internal and external consistency checks (dimensional analysis, units, known facts) to prune remaining options.. Output format: complete your task and include completion marker.",
+      "completion_condition": "Output contains task completion marker or Cross-check & Consistency Verification objectives met",
+      "is_initial": false,
+      "is_final": false,
+      "listeners": [
+        "3",
+        "4",
+        "6",
+        "7"
+      ]
+    },
+    {
+      "state_id": "6",
+      "state_name": "Confidence Scoring & Conflict Resolution",
+      "agent_id": "6",
+      "instruction": "Assign confidence levels to remaining options, resolve conflicts, and identify any residual uncertainty.. Output format: complete your task and include completion marker.",
+      "completion_condition": "Output contains task completion marker or Confidence Scoring & Conflict Resolution objectives met",
+      "is_initial": false,
+      "is_final": false,
+      "listeners": [
+        "4",
+        "5",
+        "7"
+      ]
+    },
+    {
+      "state_id": "7",
+      "state_name": "Final Decision & Output Generation",
+      "agent_id": "7",
+      "instruction": "Select the final option letter, and generate a concise justification trace for justification and reproducibility.. Output format: complete your task and include completion marker.",
+      "completion_condition": "Output contains task completion marker or Final Decision & Output Generation objectives met",
+      "is_initial": false,
+      "is_final": true,
+      "listeners": [
+        "5",
+        "6"
+      ]
+    }
+  ],
+  "transitions": [
+    {
+      "from_state": "0",
+      "to_state": "1",
+      "condition": "State 0 completion_condition is met",
+      "priority": 1
+    },
+    {
+      "from_state": "1",
+      "to_state": "2",
+      "condition": "State 1 completion_condition is met",
+      "priority": 1
+    },
+    {
+      "from_state": "2",
+      "to_state": "3",
+      "condition": "State 2 completion_condition is met",
+      "priority": 1
+    },
+    {
+      "from_state": "3",
+      "to_state": "4",
+      "condition": "State 3 completion_condition is met",
+      "priority": 1
+    },
+    {
+      "from_state": "4",
+      "to_state": "5",
+      "condition": "State 4 completion_condition is met",
+      "priority": 1
+    },
+    {
+      "from_state": "5",
+      "to_state": "6",
+      "condition": "State 5 completion_condition is met",
+      "priority": 1
+    },
+    {
+      "from_state": "6",
+      "to_state": "7",
+      "condition": "State 6 completion_condition is met",
+      "priority": 1
+    },
+    {
+      "from_state": "1",
+      "to_state": "0",
+      "condition": "State 1 detected errors requiring retry",
+      "priority": 2
+    },
+    {
+      "from_state": "2",
+      "to_state": "1",
+      "condition": "State 2 detected errors requiring retry",
+      "priority": 2
+    },
+    {
+      "from_state": "3",
+      "to_state": "2",
+      "condition": "State 3 detected errors requiring retry",
+      "priority": 2
+    },
+    {
+      "from_state": "4",
+      "to_state": "3",
+      "condition": "State 4 detected errors requiring retry",
+      "priority": 2
+    },
+    {
+      "from_state": "5",
+      "to_state": "4",
+      "condition": "State 5 detected errors requiring retry",
+      "priority": 2
+    },
+    {
+      "from_state": "6",
+      "to_state": "5",
+      "condition": "State 6 detected errors requiring retry",
+      "priority": 2
+    }
+  ]
+}

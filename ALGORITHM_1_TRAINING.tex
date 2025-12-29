@@ -1,0 +1,86 @@
+% Algorithm 1: NeuralFSM Training Algorithm
+
+\documentclass[11pt,a4paper]{article}
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage{amsmath,amssymb}
+\usepackage[ruled,vlined]{algorithm2e}
+
+\begin{document}
+
+\section*{Algorithm 1: NeuralFSM Training Algorithm}
+
+\begin{algorithm}[htbp]
+\caption{NeuralFSM Training Algorithm (Task-Adaptive)}
+\label{alg:neuralfsm_training}
+\Require{Dataset $D = \{(q_i, a_i)\}_{i=1}^N$ (unified question-answer pairs), domain $d \in \{\text{mmlu}, \text{gsm8k}, \text{humaneval}, \text{hotpotqa}, \text{alfworld}, \text{math}\}$, hyperparameters $\alpha, \beta, \gamma, \delta, \lambda$, epochs, batch\_size, $lr$}
+\Ensure{Trained TGN model $\theta^*$}
+\BlankLine
+%% Note: D is unified format; domain d determines FSM structure, prompts, validation
+
+Initialize Total FSM $F = (S, A, \delta, L, C, s_0)$\;
+Initialize TGN model $\text{TGN}_\theta$ with question encoder\;
+Initialize optimizer $\text{OPT}$ (Adam, $lr$)\;
+Initialize embedding model $E$ (SentenceTransformer)\;
+Split $D$ into $D_{\text{train}}, D_{\text{test}}$\;
+Create batches $B_{\text{train}}$ from $D_{\text{train}}$\;
+
+\BlankLine
+\For{epoch $= 1$ \textbf{to} epochs}{
+    \ForEach{batch $B \in B_{\text{train}}$}{
+        \ForEach{question $q \in B$}{
+            %% Generate task embedding
+            $q_{\text{emb}} \leftarrow E.\text{encode}(q)$\;
+            
+            $h_a \leftarrow \text{GetAgentFeatures}(\text{topology})$\;
+            $h_c \leftarrow \text{GetContextFeatures}(d)$\;
+            
+            %% TGN forward pass (task-adaptive): P(·|s, c, q_emb), w(s, a, q_emb)
+            $\text{fsm\_out} \leftarrow \text{TGN}_\theta(h_a, h_c, s_0, q_{\text{emb}})$\;
+            
+            $\text{fsm\_mgr}.\text{reset}()$\;
+            %% Execute FSM with probabilistic sampling
+            $(ans, log) \leftarrow \text{ExecuteFSM}(\text{topology}, \text{fsm\_mgr}, \text{fsm\_out}, q, \text{TGN}_\theta, q_{\text{emb}}, h_a, h_c)$\;
+            
+            %% Evaluate and compute reward
+            $R \leftarrow 1.0$ \textbf{if} $\text{CheckCorrect}(ans, gt)$ \textbf{else} $0.0$\;
+            
+            %% Policy gradient loss
+            $L_{\text{policy}} \leftarrow -\log P(\tau | \theta, q_{\text{emb}}) \cdot R$\;
+            
+            $\text{targets}_t \leftarrow \text{GetTransitionTargets}(\text{fsm\_mgr}.\text{history})$\;
+            $L_{\text{transition}} \leftarrow 0$\;
+            \If{$\text{targets}_t \neq \emptyset$}{
+                %% State transition loss (based on sampling, task-adaptive)
+                $L_{\text{transition}} \leftarrow -\frac{1}{|\mathcal{T}|} \sum_{s_t \in \text{targets}_t} \log P(s_t | s_{t-1}, c, q_{\text{emb}}, \theta)$\;
+            }
+            
+            $\text{targets}_l \leftarrow \text{GetListenerTargets}(\text{fsm\_mgr}.\text{listeners})$\;
+            %% Listener path loss (based on sampling, task-adaptive)
+            $L_{\text{listener}} \leftarrow \text{BCE}(w(s, a, q_{\text{emb}}), \text{targets}_l)$\;
+            
+            $C_{\text{episode}} \leftarrow \text{ComputeCost}(log)$\;
+            %% LLM cost loss
+            $L_{\text{cost}} \leftarrow (C_{\text{episode}} - C_{\text{baseline}})^2$\;
+            
+            \If{$\text{enable\_protect}$}{
+                %% Protection loss: risk(u,v) = 1 - trust(u)
+                $L_{\text{protection}} \leftarrow \sum_{(u,v) \in E} [\text{risk}(u,v) \times \|m(u \to v)\|^2]$\;
+            }
+            \Else{
+                $L_{\text{protection}} \leftarrow 0$\;
+            }
+            
+            %% Total loss
+            $L_{\text{total}} \leftarrow \alpha \cdot L_{\text{policy}} + \beta \cdot L_{\text{transition}} + \gamma \cdot L_{\text{listener}} + \delta \cdot L_{\text{cost}} + \lambda \cdot L_{\text{protection}}$\;
+            
+            %% Update parameters: θ ← θ - lr · ∇_θ L_total
+            $\theta \leftarrow \theta - lr \cdot \nabla_\theta L_{\text{total}}$\;
+        }
+    }
+}
+
+\Return{$\text{TGN}_{\theta^*}$}
+\end{algorithm}
+
+\end{document}

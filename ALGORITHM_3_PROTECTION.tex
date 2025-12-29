@@ -1,0 +1,50 @@
+% Algorithm 3: Protection Mechanism Integration Algorithm
+
+\documentclass[11pt,a4paper]{article}
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage{amsmath,amssymb}
+\usepackage[ruled,vlined]{algorithm2e}
+
+\begin{document}
+
+\section*{Algorithm 3: Protection Mechanism Integration Algorithm}
+
+\begin{algorithm}[htbp]
+\caption{ProtectedTGN Forward Pass (Protection Mechanism Integration)}
+\label{alg:protection}
+\Require{$\text{agent\_features}$: $h_a \in \mathbb{R}^{N \times d}$, $\text{communication\_topology}$: $E \in \mathbb{R}^{2 \times M}$, $\text{question\_embedding}$: $q_{\text{emb}} \in \mathbb{R}^{384}$, $\text{current\_state\_id}$: $s_t$, $\text{context\_features}$: $h_c$, graph $G$, $\text{message\_counts}$: $\{\text{count}_i\}$, $\text{embeddings}$: $\{z_i\}$}
+\Ensure{$\text{protected\_outputs}$: $\{h_a, \text{transition\_probs}, \text{listener\_weights}\}$}
+
+%% Compute protection priorities (static, cacheable): π[i] = w_BC·BC(i) + w_PR·PR(i)
+$\pi \leftarrow \text{ComputePriorities}(G)$\;
+
+%% Compute anomaly scores (dynamic): α[i] = λ_freq·α_freq(i) + λ_semantic·α_semantic(i)
+$\alpha \leftarrow \text{ComputeAnomaly}(\text{counts}, \text{embeddings})$\;
+
+%% Compute trust scores
+\ForEach{node $i$}{
+    $\text{trust}[i] \leftarrow (1 - \alpha[i]) \cdot (1 + \pi[i])$\;
+}
+
+%% Compute message weights (learnable MLP): Input [trust_source, priority_target]
+\ForEach{edge $(u, v) \in E$}{
+    $w[u,v] \leftarrow \text{MLP}(\text{trust}[u], \pi[v])$\;
+}
+
+%% Training-time defense: filter low-trust connections
+$(E_{\text{prot}}, w_{\text{prot}}) \leftarrow \text{FilterEdges}(E, w, \text{threshold}=0.3)$\;
+
+%% Call TGN with question embedding
+$\text{fsm\_out} \leftarrow \text{TGN}_\theta(h_a, E_{\text{prot}}, s_t, h_c, q_{\text{emb}}, \text{history})$\;
+
+%% Runtime defense: message attenuation
+\If{$E_{\text{prot}}.\text{size} == E.\text{size}$}{
+    %% protected_output = trust × TGN_output + (1-trust) × h_a
+    $\text{fsm\_out}['h_a'] \leftarrow \text{Attenuate}(\text{fsm\_out}['h_a'], h_a, E, w, \alpha)$\;
+}
+
+\Return{$\text{fsm\_out}$}\;
+\end{algorithm}
+
+\end{document}

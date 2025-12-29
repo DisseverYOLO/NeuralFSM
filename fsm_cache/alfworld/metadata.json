@@ -1,0 +1,11 @@
+{
+  "dataset": "alfworld",
+  "category": null,
+  "created_at": "2025-12-09T11:24:23.868241",
+  "num_states": 10,
+  "num_agents": 9,
+  "num_transitions": 0,
+  "version": "1.0",
+  "config_hash": "73ddca30d8eced3f",
+  "generation_cost": 0.006693
+}

@@ -1,0 +1,11 @@
+{
+  "dataset": "hotpotqa",
+  "category": null,
+  "created_at": "2025-12-08T15:57:36.553431",
+  "num_states": 8,
+  "num_agents": 8,
+  "num_transitions": 0,
+  "version": "1.0",
+  "config_hash": "dc7bda8cb2686e9d",
+  "generation_cost": 0.00478255
+}

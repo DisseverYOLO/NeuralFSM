@@ -1,0 +1,11 @@
+{
+  "dataset": "gpqa",
+  "category": null,
+  "created_at": "2025-12-17T16:02:47.878688",
+  "num_states": 8,
+  "num_agents": 8,
+  "num_transitions": 0,
+  "version": "1.0",
+  "config_hash": "c4d90f3d52b4a5ef",
+  "generation_cost": 0.0022599
+}

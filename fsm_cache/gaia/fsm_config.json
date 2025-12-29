@@ -1,0 +1,171 @@
+{
+  "states": [
+    {
+      "state_id": "0",
+      "state_name": "Task Parsing",
+      "agent_id": "0",
+      "instruction": "Parse the user's question to extract requirements, constraints, and the required output format; detect presence of file_path and summarize task intent.. Output format: complete your task and include completion marker.",
+      "completion_condition": "Output contains task completion marker or Task Parsing objectives met",
+      "is_initial": true,
+      "is_final": false,
+      "listeners": [
+        "1",
+        "2"
+      ]
+    },
+    {
+      "state_id": "1",
+      "state_name": "Plan & Tool Selection",
+      "agent_id": "1",
+      "instruction": "Decide solving strategy: whether to read and interpret an attached file or rely solely on internal reasoning; identify intermediate quantities to compute and outline the processing sequence.. Output format: complete your task and include completion marker.",
+      "completion_condition": "Output contains task completion marker or Plan & Tool Selection objectives met",
+      "is_initial": false,
+      "is_final": false,
+      "listeners": [
+        "0",
+        "2",
+        "3"
+      ]
+    },
+    {
+      "state_id": "2",
+      "state_name": "Evidence Acquisition: File Reading",
+      "agent_id": "2",
+      "instruction": "If a file_path is provided, read and interpret the file contents (e.g., tables, images, text) to extract relevant data and facts needed for solving; handle missing formats gracefully.. Output format: complete your task and include completion marker.",
+      "completion_condition": "Output contains task completion marker or Evidence Acquisition: File Reading objectives met",
+      "is_initial": false,
+      "is_final": false,
+      "listeners": [
+        "0",
+        "1",
+        "3",
+        "4"
+      ]
+    },
+    {
+      "state_id": "3",
+      "state_name": "Evidence Acquisition: Internal Reasoning",
+      "agent_id": "3",
+      "instruction": "In parallel or when no file is provided, gather and organize internal knowledge and reasoning relevant to the problem; prepare a synthesis of facts not derived from the file.. Output format: complete your task and include completion marker.",
+      "completion_condition": "Output contains task completion marker or Evidence Acquisition: Internal Reasoning objectives met",
+      "is_initial": false,
+      "is_final": false,
+      "listeners": [
+        "1",
+        "2",
+        "4",
+        "5"
+      ]
+    },
+    {
+      "state_id": "4",
+      "state_name": "Reasoning / Computation",
+      "agent_id": "4",
+      "instruction": "Perform multi-step reasoning, calculations, and integration of evidence from both file-derived data and internal knowledge to produce candidate conclusions or results.. Output format: complete your task and include completion marker.",
+      "completion_condition": "Output contains task completion marker or Reasoning / Computation objectives met",
+      "is_initial": false,
+      "is_final": false,
+      "listeners": [
+        "2",
+        "3",
+        "5",
+        "6"
+      ]
+    },
+    {
+      "state_id": "5",
+      "state_name": "Verification",
+      "agent_id": "5",
+      "instruction": "Cross-check results for consistency, validate units and constraints, and perform sanity checks against the problem requirements and evidence.. Output format: complete your task and include completion marker.",
+      "completion_condition": "Output contains task completion marker or Verification objectives met",
+      "is_initial": false,
+      "is_final": false,
+      "listeners": [
+        "3",
+        "4",
+        "6"
+      ]
+    },
+    {
+      "state_id": "6",
+      "state_name": "Final Answer",
+      "agent_id": "6",
+      "instruction": "Emit the final answer strictly in the required format, ensuring conciseness, alignment with verified evidence, and absence of extraneous information.. Output format: complete your task and include completion marker.",
+      "completion_condition": "Output contains task completion marker or Final Answer objectives met",
+      "is_initial": false,
+      "is_final": true,
+      "listeners": [
+        "4",
+        "5"
+      ]
+    }
+  ],
+  "transitions": [
+    {
+      "from_state": "0",
+      "to_state": "1",
+      "condition": "State 0 completion_condition is met",
+      "priority": 1
+    },
+    {
+      "from_state": "1",
+      "to_state": "2",
+      "condition": "State 1 completion_condition is met",
+      "priority": 1
+    },
+    {
+      "from_state": "2",
+      "to_state": "3",
+      "condition": "State 2 completion_condition is met",
+      "priority": 1
+    },
+    {
+      "from_state": "3",
+      "to_state": "4",
+      "condition": "State 3 completion_condition is met",
+      "priority": 1
+    },
+    {
+      "from_state": "4",
+      "to_state": "5",
+      "condition": "State 4 completion_condition is met",
+      "priority": 1
+    },
+    {
+      "from_state": "5",
+      "to_state": "6",
+      "condition": "State 5 completion_condition is met",
+      "priority": 1
+    },
+    {
+      "from_state": "1",
+      "to_state": "0",
+      "condition": "State 1 detected errors requiring retry",
+      "priority": 2
+    },
+    {
+      "from_state": "2",
+      "to_state": "1",
+      "condition": "State 2 detected errors requiring retry",
+      "priority": 2
+    },
+    {
+      "from_state": "3",
+      "to_state": "2",
+      "condition": "State 3 detected errors requiring retry",
+      "priority": 2
+    },
+    {
+      "from_state": "4",
+      "to_state": "3",
+      "condition": "State 4 detected errors requiring retry",
+      "priority": 2
+    },
+    {
+      "from_state": "5",
+      "to_state": "4",
+      "condition": "State 5 detected errors requiring retry",
+      "priority": 2
+    }
+  ]
+}

@@ -1,0 +1,350 @@
+{
+  "states": [
+    {
+      "state_id": "0",
+      "state_name": "Goal_Understanding",
+      "agent_id": "0",
+      "instruction": "Parse the high-level goal text provided by the environment. Classify the task type (e.g., locate, acquire, process, place). Decompose into actionable subgoals and outline a workable action sequence with required objects and receptacles. Produce a deterministic Plan JSON with fields: goal (string), task_type (string), subgoals (array of {id, description, prerequisites}), resources (lists of required objects and receptacles), and sequence (array of steps with {step_id, action, target, preconditions, success_criteria, contingencies}). Include clear dependencies and alternative branches for common variations (e.g., object inside a container, missing item). Output must include the <PLAN_READY> tag and a valid JSON plan.",
+      "completion_condition": "Output contains <PLAN_READY> tag and valid_plan JSON with keys goal, task_type, subgoals, resources, sequence.",
+      "is_initial": true,
+      "is_final": false,
+      "listeners": [
+        "0",
+        "1",
+        "2",
+        "3",
+        "4",
+        "5",
+        "6",
+        "7",
+        "8"
+      ]
+    },
+    {
+      "state_id": "1",
+      "state_name": "Initial_Exploration",
+      "agent_id": "1",
+      "instruction": "Survey the current location to identify visible objects and receptacles, determine accessibility (open/closed), and build an EnvironmentSnapshot. Include areas/rooms, visible objects with attributes (type, state, location coords/description), receptacles with states, accessibility notes, readiness flag, and a coarse layout graph. Highlight obstacles or blocked pathways and indicate items requiring inspection. Output must include the <ENV_SNAPSHOT> tag and a JSON EnvironmentSnapshot.",
+      "completion_condition": "Output contains <ENV_SNAPSHOT> tag and readiness flag set to true; includes at least areas and receptacles with states.",
+      "is_initial": false,
+      "is_final": false,
+      "listeners": [
+        "0",
+        "1",
+        "2",
+        "3",
+        "4",
+        "5",
+        "6",
+        "7",
+        "8"
+      ]
+    },
+    {
+      "state_id": "2",
+      "state_name": "Object_Search",
+      "agent_id": "2",
+      "instruction": "Systematically search for the target object and required variants. If the object may be inside containers, inspect receptacles as needed and verify presence. Return a VerificationReport: {found: boolean, location_description, object_identity: {id,name,variant}, evidence, conditioning_notes}. If not found, provide a prioritized alternative_locations list. Output must be JSON under verification_report and include the <VERIFICATION_REPORT> tag.",
+      "completion_condition": "verification_report.found is true OR verification_report.found is false with non-empty alternative_locations; Output contains <VERIFICATION_REPORT> tag.",
+      "is_initial": false,
+      "is_final": false,
+      "listeners": [
+        "0",
+        "1",
+        "2",
+        "3",
+        "4",
+        "5",
+        "6",
+        "7",
+        "8"
+      ]
+    },
+    {
+      "state_id": "3",
+      "state_name": "Object_Acquisition",
+      "agent_id": "3",
+      "instruction": "Navigate to the located object, pick up the object from its receptacle, and verify successful pickup. Provide: navigate_to(location), approach_target, grasp_object, confirm_pickup (object_in_hand: true, object_id). Include safety checks and handle partial pickups or regrabs if needed. Output AcquisitionReport with status, object_id, location, and any environmental notes that could affect transport. Include <ACQUISITION_REPORT> tag.",
+      "completion_condition": "acquisition_report.status == 'success' AND acquisition_report.object_in_hand == true; Output contains <ACQUISITION_REPORT> tag.",
+      "is_initial": false,
+      "is_final": false,
+      "listeners": [
+        "0",
+        "1",
+        "2",
+        "3",
+        "4",
+        "5",
+        "6",
+        "7",
+        "8"
+      ]
+    },
+    {
+      "state_id": "4",
+      "state_name": "Object_Processing",
+      "agent_id": "4",
+      "instruction": "Determine whether processing (clean/heat/cool) is required as dictated by the plan. If required, perform the appropriate action and verify completion; if not required, explicitly skip to the next phase. For each action, provide: action_type (clean/heat/cool), parameters (temperature, duration, method), start_time, end_time, and verification (e.g., cleanliness_status, temperature_reached). Output ProcessingReport with success or failure and any deviations. Include <PROCESSING_REPORT> tag.",
+      "completion_condition": "processing_report.success == true OR processing_report.processing_skipped == true; Output contains <PROCESSING_REPORT> tag.",
+      "is_initial": false,
+      "is_final": false,
+      "listeners": [
+        "0",
+        "1",
+        "2",
+        "3",
+        "4",
+        "5",
+        "6",
+        "7",
+        "8"
+      ]
+    },
+    {
+      "state_id": "5",
+      "state_name": "Destination_Planning",
+      "agent_id": "5",
+      "instruction": "Identify the target receptacle/location for placement, navigate there, and prepare the destination (open cabinet or container, clear space) as needed. Output a DestinationPreparationReport with readiness status and blockers, and include a NavigationPlan to reach the destination. Include <DEST_PREP_REPORT> tag.",
+      "completion_condition": "destination_readiness == true AND navigation_plan is present; Output contains <DEST_PREP_REPORT> tag.",
+      "is_initial": false,
+      "is_final": false,
+      "listeners": [
+        "0",
+        "1",
+        "2",
+        "3",
+        "4",
+        "5",
+        "6",
+        "7",
+        "8"
+      ]
+    },
+    {
+      "state_id": "6",
+      "state_name": "Object_Placement",
+      "agent_id": "6",
+      "instruction": "Place the object into/on the target receptacle and verify successful placement. Provide: placement_action (place_in/place_on), final_position, alignment_status, and placement_verification (object_in_place: true, stability_ok: true). If placement is obstructed, propose alternatives. Output PlacementReport with outcome and any adjustments, and include <PLACEMENT_REPORT> tag.",
+      "completion_condition": "placement_verification.object_in_place == true AND placement_verification.stability_ok == true; Output contains <PLACEMENT_REPORT> tag.",
+      "is_initial": false,
+      "is_final": false,
+      "listeners": [
+        "0",
+        "1",
+        "2",
+        "3",
+        "4",
+        "5",
+        "6",
+        "7",
+        "8"
+      ]
+    },
+    {
+      "state_id": "7",
+      "state_name": "Subgoal_Verification",
+      "agent_id": "8",
+      "instruction": "Check that all subgoals are satisfied. Generate a TaskSummary including final_status, subgoal_statuses, object_inventory_changes, processing_logs, time_taken, and notes for future tasks. Output a TaskSummary with <TASK_SUMMARY> tag.",
+      "completion_condition": "task_summary.final_status in ['success','partial_success']; Output contains <TASK_SUMMARY> tag.",
+      "is_initial": false,
+      "is_final": false,
+      "listeners": [
+        "0",
+        "1",
+        "2",
+        "3",
+        "4",
+        "5",
+        "6",
+        "7",
+        "8"
+      ]
+    },
+    {
+      "state_id": "8",
+      "state_name": "Error_Recovery",
+      "agent_id": "7",
+      "instruction": "Monitor actions for failures. If an error occurs, detect it, trigger replanning of the appropriate previous phase, and retry with adjusted steps. Output an ErrorReport detailing: error_type, affected_phase, root_cause, proposed_replan (target_phase and revised steps), retry_count, and proposed contingencies. Coordinate with PlanMapper to update the overall plan if needed. Include <ERROR_REPORT> tag.",
+      "completion_condition": "error_report present with next_state_id specified; Output contains <ERROR_REPORT> tag.",
+      "is_initial": false,
+      "is_final": false,
+      "listeners": [
+        "0",
+        "1",
+        "2",
+        "3",
+        "4",
+        "5",
+        "6",
+        "7",
+        "8"
+      ]
+    },
+    {
+      "state_id": "9",
+      "state_name": "Final_Submission",
+      "agent_id": "8",
+      "instruction": "Format and submit final answer using the Use <|submit|> <ANSWER> format to submit the final answer <answer> format. The answer must include final_status and a concise summary. Output must contain the Use <|submit|> <ANSWER> format to submit the final answer tag with the answer.",
+      "completion_condition": "Output contains Use <|submit|> <ANSWER> format to submit the final answer tag with a complete answer payload.",
+      "is_initial": false,
+      "is_final": true,
+      "listeners": [
+        "0",
+        "1",
+        "2",
+        "3",
+        "4",
+        "5",
+        "6",
+        "7",
+        "8"
+      ]
+    }
+  ],
+  "transitions": [
+    {
+      "from_state": "0",
+      "to_state": "1",
+      "condition": "State 0 completion_condition is met",
+      "priority": 1
+    },
+    {
+      "from_state": "1",
+      "to_state": "2",
+      "condition": "State 1 completion_condition is met",
+      "priority": 1
+    },
+    {
+      "from_state": "2",
+      "to_state": "3",
+      "condition": "State 2 completion_condition is met",
+      "priority": 1
+    },
+    {
+      "from_state": "3",
+      "to_state": "4",
+      "condition": "State 3 completion_condition is met",
+      "priority": 1
+    },
+    {
+      "from_state": "4",
+      "to_state": "5",
+      "condition": "State 4 completion_condition is met",
+      "priority": 1
+    },
+    {
+      "from_state": "5",
+      "to_state": "6",
+      "condition": "State 5 completion_condition is met",
+      "priority": 1
+    },
+    {
+      "from_state": "6",
+      "to_state": "7",
+      "condition": "State 6 completion_condition is met",
+      "priority": 1
+    },
+    {
+      "from_state": "7",
+      "to_state": "9",
+      "condition": "State 7 completion_condition is met",
+      "priority": 1
+    },
+    {
+      "from_state": "0",
+      "to_state": "8",
+      "condition": "State 0 encountered_error",
+      "priority": 2
+    },
+    {
+      "from_state": "1",
+      "to_state": "8",
+      "condition": "State 1 encountered_error",
+      "priority": 2
+    },
+    {
+      "from_state": "2",
+      "to_state": "8",
+      "condition": "State 2 encountered_error",
+      "priority": 2
+    },
+    {
+      "from_state": "3",
+      "to_state": "8",
+      "condition": "State 3 encountered_error",
+      "priority": 2
+    },
+    {
+      "from_state": "4",
+      "to_state": "8",
+      "condition": "State 4 encountered_error",
+      "priority": 2
+    },
+    {
+      "from_state": "5",
+      "to_state": "8",
+      "condition": "State 5 encountered_error",
+      "priority": 2
+    },
+    {
+      "from_state": "6",
+      "to_state": "8",
+      "condition": "State 6 encountered_error",
+      "priority": 2
+    },
+    {
+      "from_state": "7",
+      "to_state": "8",
+      "condition": "State 7 encountered_error",
+      "priority": 2
+    },
+    {
+      "from_state": "8",
+      "to_state": "0",
+      "condition": "replan_target == 'GoalUnderstanding'",
+      "priority": 1
+    },
+    {
+      "from_state": "8",
+      "to_state": "1",
+      "condition": "replan_target == 'Survey'",
+      "priority": 1
+    },
+    {
+      "from_state": "8",
+      "to_state": "2",
+      "condition": "replan_target == 'Search'",
+      "priority": 1
+    },
+    {
+      "from_state": "8",
+      "to_state": "3",
+      "condition": "replan_target == 'Acquire'",
+      "priority": 1
+    },
+    {
+      "from_state": "8",
+      "to_state": "4",
+      "condition": "replan_target == 'Process'",
+      "priority": 1
+    },
+    {
+      "from_state": "8",
+      "to_state": "5",
+      "condition": "replan_target == 'DestinationPrep'",
+      "priority": 1
+    },
+    {
+      "from_state": "8",
+      "to_state": "6",
+      "condition": "replan_target == 'Placement'",
+      "priority": 1
+    },
+    {
+      "from_state": "8",
+      "to_state": "7",
+      "condition": "replan_target == 'Verification'",
+      "priority": 1
+    }
+  ]
+}

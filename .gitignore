@@ -1,0 +1,48 @@
+################################################################################
+# NeuralFSM - Git ignore rules
+#
+# User-requested ignores:
+# - datasets/, results/, paper/, docs/
+# - all *.md and *.tex documents (except README.md)
+################################################################################
+
+# --- User requested folders ---
+datasets/
+results/
+paper/
+docs/
+
+# --- User requested file types ---
+*.md
+*.tex
+
+# Keep repository landing page
+!README.md
+
+# --- Python / tooling ---
+__pycache__/
+*.py[cod]
+*.pyd
+.Python
+
+# Virtual environments
+.venv/
+venv/
+env/
+
+# IDE
+.vscode/
+.idea/
+
+# OS
+Thumbs.db
+Desktop.ini
+
+# Logs / runtime artifacts
+*.log
+*.tmp
+
+# --- Extra ignores ---
+**/__pycache__/
+*.pyc
+.DS_Store

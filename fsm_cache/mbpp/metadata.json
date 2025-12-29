@@ -1,0 +1,11 @@
+{
+  "dataset": "mbpp",
+  "category": null,
+  "created_at": "2025-12-11T22:21:41.121701",
+  "num_states": 7,
+  "num_agents": 7,
+  "num_transitions": 0,
+  "version": "1.0",
+  "config_hash": "53773a13c8fc024f",
+  "generation_cost": 0.0024936000000000003
+}

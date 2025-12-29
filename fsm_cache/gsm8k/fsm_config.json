@@ -1,0 +1,169 @@
+{
+  "states": [
+    {
+      "state_id": "0",
+      "state_name": "Initial_Understanding",
+      "agent_id": "0",
+      "instruction": "Task: Parse the problem text provided for the GSM8K-style question. Output a concise structured summary including: (a) givens with quantities and units, (b) target quantity to compute with its units, (c) constraints and assumptions, (d) potential ambiguities, (e) the final question to be answered, (f) any data that requires conversion/normalization, (g) references to the original text for each extracted item. Input format: plain problem text. Output format: a structured summary document with labeled sections and a traceable reference map. COMPLETION_CRITERIA: Output must contain <ANALYSIS_COMPLETE> tag and include all key items identified above.",
+      "completion_condition": "Output contains <ANALYSIS_COMPLETE> tag and all key items identified",
+      "is_initial": true,
+      "is_final": false,
+      "listeners": [
+        "1",
+        "2",
+        "3",
+        "4",
+        "5",
+        "6"
+      ]
+    },
+    {
+      "state_id": "1",
+      "state_name": "Solution_Planning",
+      "agent_id": "1",
+      "instruction": "Task: Based on the initial understanding, produce an ordered plan. Output should include: (a) target quantity and its units, (b) step-by-step workflow, (c) required formulas/relations, (d) data inputs needed from preparation or intermediate calculations, (e) checkpoints to validate progress, (f) potential alternative methods, (g) any assumptions used. Input format: the structured analysis from state 0. Output format: clearly labeled plan sections. COMPLETION_CRITERIA: Output contains <PLAN_READY> tag and a complete step-by-step plan outlining steps and dependencies.",
+      "completion_condition": "Output contains <PLAN_READY> tag and step-by-step plan outlined",
+      "is_initial": false,
+      "is_final": false,
+      "listeners": [
+        "2",
+        "3",
+        "4",
+        "5",
+        "6"
+      ]
+    },
+    {
+      "state_id": "2",
+      "state_name": "Calculation_Preparation",
+      "agent_id": "2",
+      "instruction": "Task: Translate the plan into a calculation preparation blueprint. Define symbols for all variables with clear labels, establish a variable registry, specify required unit conversions, construct the equation set and the order of operations, and list intermediate quantities with their units. Output format: list of symbolic equations, variable registry, conversion notes, and a calculation roadmap. COMPLETION_CRITERIA: Output contains <ROADMAP_READY> tag and includes variable registry and equations.",
+      "completion_condition": "Output contains <ROADMAP_READY> tag and includes variable registry and equations",
+      "is_initial": false,
+      "is_final": false,
+      "listeners": [
+        "3",
+        "4",
+        "5",
+        "6"
+      ]
+    },
+    {
+      "state_id": "3",
+      "state_name": "Intermediate_Calculation",
+      "agent_id": "3",
+      "instruction": "Task: Execute intermediate calculations step by step according to the roadmap. Carry units through every operation, perform arithmetic with exactness, and log intermediate results with units. At each sub-step, verify unit consistency, check for arithmetic errors, and provide sanity notes and a trace back to the plan/equations. Output format: a sequence of sub-steps with numerical results and units, plus a short verification note per step. COMPLETION_CRITERIA: Output contains <INTERMEDIATE_DONE> tag and includes a trace of all intermediate results with units and links to equations.",
+      "completion_condition": "Output contains <INTERMEDIATE_DONE> tag and includes intermediate results with units and equation links",
+      "is_initial": false,
+      "is_final": false,
+      "listeners": [
+        "4",
+        "5",
+        "6"
+      ]
+    },
+    {
+      "state_id": "4",
+      "state_name": "Final_Calculation",
+      "agent_id": "4",
+      "instruction": "Task: From the intermediate results, perform the final combination to obtain the target quantity. Do the final arithmetic, apply proper rounding/precision, ensure dimensional consistency, and provide the final numeric value with its units along with a concise justification tracing back to the plan and intermediate results.",
+      "completion_condition": "Output contains <FINAL_RESULT> tag and provides numeric value with units and justification trace",
+      "is_initial": false,
+      "is_final": false,
+      "listeners": [
+        "5",
+        "6"
+      ]
+    },
+    {
+      "state_id": "5",
+      "state_name": "Verification",
+      "agent_id": "5",
+      "instruction": "Task: Perform verification and review of the final result. Assess magnitude, unit consistency, and alignment with problem context. Conduct edge-case analysis and consider alternative methods. If issues are found, propose corrections or iterations and, if needed, trigger a backtrack to an earlier phase (Preparation or Intermediate Calculation). Output format: a concise verification report with a verdict, any caveats, and suggested remedies. COMPLETION_CRITERIA: Output contains <VERIFICATION_OK> tag and a verdict. If issues exist, clearly indicate backtracking suggestion.",
+      "completion_condition": "Output contains <VERIFICATION_OK> tag and verdict",
+      "is_initial": false,
+      "is_final": false,
+      "listeners": [
+        "6"
+      ]
+    },
+    {
+      "state_id": "6",
+      "state_name": "Final_Submission",
+      "agent_id": "6",
+      "instruction": "Task: Format and submit the final numeric answer using the required Use <|submit|> <ANSWER> format to submit the final answer <answer> format. Ensure the units, rounding, and presentation align with the problem statement. Include a one-line justification or reference to the plan, and prepare any needed summary citations for submission/testing. Output format: a neat final answer block. COMPLETION_CRITERIA: Output contains Use <|submit|> <ANSWER> format to submit the final answer <answer> tag with the numeric value and units.",
+      "completion_condition": "Output contains Use <|submit|> <ANSWER> format to submit the final answer <answer> tag with the numeric value and units",
+      "is_initial": false,
+      "is_final": true,
+      "listeners": []
+    }
+  ],
+  "transitions": [
+    {
+      "from_state": "0",
+      "to_state": "1",
+      "condition": "State 0 completion_condition is met",
+      "priority": 1
+    },
+    {
+      "from_state": "1",
+      "to_state": "2",
+      "condition": "State 1 completion_condition is met",
+      "priority": 1
+    },
+    {
+      "from_state": "2",
+      "to_state": "3",
+      "condition": "State 2 completion_condition is met",
+      "priority": 1
+    },
+    {
+      "from_state": "3",
+      "to_state": "4",
+      "condition": "State 3 completion_condition is met",
+      "priority": 1
+    },
+    {
+      "from_state": "4",
+      "to_state": "5",
+      "condition": "State 4 completion_condition is met",
+      "priority": 1
+    },
+    {
+      "from_state": "5",
+      "to_state": "6",
+      "condition": "State 5 completion_condition is met",
+      "priority": 1
+    },
+    {
+      "from_state": "1",
+      "to_state": "0",
+      "condition": "State 1 detected major plan issues (retry needed)",
+      "priority": 2
+    },
+    {
+      "from_state": "2",
+      "to_state": "1",
+      "condition": "State 2 detected issues in preparation (back to planning)",
+      "priority": 2
+    },
+    {
+      "from_state": "3",
+      "to_state": "2",
+      "condition": "State 3 detects inconsistency (back to preparation)",
+      "priority": 2
+    },
+    {
+      "from_state": "4",
+      "to_state": "3",
+      "condition": "State 4 detects issues (back to intermediate)",
+      "priority": 2
+    },
+    {
+      "from_state": "5",
+      "to_state": "4",
+      "condition": "State 5 detects issues (back to final calculation)",
+      "priority": 2
+    }
+  ]
+}

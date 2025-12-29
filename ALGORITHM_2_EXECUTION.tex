@@ -1,0 +1,81 @@
+% Algorithm 2: Task-Adaptive FSM Execution Algorithm
+
+\documentclass[11pt,a4paper]{article}
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage{amsmath,amssymb}
+\usepackage[ruled,vlined]{algorithm2e}
+
+\begin{document}
+
+\section*{Algorithm 2: Task-Adaptive FSM Execution Algorithm}
+
+\begin{algorithm}[htbp]
+\caption{Task-Adaptive FSM Execution Algorithm (Probabilistic Sampling)}
+\label{alg:fsm_execution}
+\Require{$\text{topology}$, $\text{fsm\_mgr}$, $\text{fsm\_out}$, question $q$, $\text{TGN}_\theta$, $q_{\text{emb}}$, $h_a$, $h_c$, $T_{\max}$}
+\Ensure{$\text{ans}$, $\text{log}$}
+
+%% Initialize
+$\text{fsm\_mgr}.\text{reset}()$\;
+$s_t \leftarrow s_0$\;
+$t \leftarrow 0$\;
+$\log P(\tau) \leftarrow 0$\;
+
+\BlankLine
+\While{$t < T_{\max}$}{
+    $s_{\text{curr}} \leftarrow \text{fsm\_mgr}.\text{get\_state}(s_t)$\;
+    
+    %% Dynamically recompute transition probabilities (task-adaptive)
+    \If{$\text{TGN}_\theta \neq \text{null}$ \textbf{and} $q_{\text{emb}} \neq \text{null}$}{
+        $\text{fsm\_out} \leftarrow \text{TGN}_\theta(h_a, h_c, s_t, q_{\text{emb}})$\;
+    }
+    %% P(·|s_t, c, q_emb)
+    $P_{\text{trans}} \leftarrow \text{fsm\_out}[\text{'transition\_probs'}]$\;
+    
+    %% Probabilistic sampling: s_{t+1} ~ P(·|s_t, c, q_emb)
+    $s_{t+1} \sim \text{Multinomial}(P_{\text{trans}})$\;
+    $\log P(\tau) \leftarrow \log P(\tau) + \log P(s_{t+1} | s_t, c, q_{\text{emb}}, \theta)$\;
+    
+    %% Match transition condition from Total FSM
+    $cond \leftarrow \text{fsm\_mgr}.\text{get\_condition}(s_t, s_{t+1})$\;
+    
+    %% Execute agent at current state
+    $\text{agent\_id} \leftarrow s_{\text{curr}}.\text{responsible\_agent\_id}$\;
+    $\text{agent} \leftarrow \text{topology}.\text{get\_agent}(\text{agent\_id})$\;
+    $out \leftarrow \text{agent}.\text{execute}(q, \text{context})$\;
+    
+    %% Check completion condition
+    \If{$\text{CheckComplete}(s_{\text{curr}}, out)$}{
+        \If{$s_{\text{curr}}.\text{is\_final}$}{
+            $ans \leftarrow \text{ExtractAnswer}(out)$\;
+            \textbf{break}\;
+        }
+    }
+    
+    %% Sample listener relationships (task-adaptive): w(s, a, q_emb)
+    $w_{\text{listen}} \leftarrow \text{fsm\_out}[\text{'listener\_weights'}]$\;
+    $\text{listeners} \leftarrow \text{SampleListeners}(w_{\text{listen}}, k=3)$\;
+    
+    %% Propagate messages to sampled listeners
+    \ForEach{$\text{lid} \in \text{listeners}$}{
+        $\text{agent} \leftarrow \text{topology}.\text{get\_agent}(\text{lid})$\;
+        $msg \leftarrow \text{FormatMsg}(out, s_{\text{curr}})$\;
+        $\text{agent}.\text{add\_msg}(msg)$\;
+    }
+    
+    %% Update FSM state manager
+    $\text{fsm\_mgr}.\text{transition}(s_{t+1})$\;
+    $\text{fsm\_mgr}.\text{set\_listeners}(s_t, \text{listeners})$\;
+    $\text{fsm\_mgr}.\text{history}.\text{append}((s_t, s_{t+1}))$\;
+    
+    $s_t \leftarrow s_{t+1}$\;
+    $t \leftarrow t + 1$\;
+}
+
+$log \leftarrow \{\log P(\tau), \text{fsm\_mgr}.\text{history}, \text{fsm\_mgr}.\text{listeners}, ans\}$\;
+
+\Return{$(ans, log)$}
+\end{algorithm}
+
+\end{document}

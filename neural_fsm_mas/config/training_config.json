@@ -1,0 +1,77 @@
+{
+  "training": {
+    "num_epochs": 100,
+    "batch_size": 16,
+    "learning_rate": 0.001,
+    "num_rounds": 3,
+    "train_ratio": 0.7,
+    "val_ratio": 0.15,
+    "test_ratio": 0.15,
+    "random_seed": 42,
+    "early_stopping_patience": 10,
+    "gradient_clip_norm": 1.0
+  },
+  
+  "model": {
+    "memory_dim": 128,
+    "time_dim": 32,
+    "message_dim": 64,
+    "num_layers": 2,
+    "dropout": 0.1,
+    "heads": 4
+  },
+  
+  "llm": {
+    "llm_name": "gpt-5-nano",
+    "use_azure": false,
+    "temperature": 0.7,
+    "max_tokens": 2000
+  },
+  
+  "agents": {
+    "available_tools": [
+      "knowledge_retrieval",
+      "logical_reasoning", 
+      "calculation",
+      "analysis",
+      "critical_thinking",
+      "synthesis",
+      "verification"
+    ],
+    "enable_step_by_step_reasoning": true,
+    "enable_verification": true,
+    "max_reasoning_steps": 10
+  },
+  
+  "domains": {
+    "STEM": {
+      "agents": ["Mathematical Reasoner", "Scientific Analyzer", "Problem Solver", "Verifier"],
+      "focus_areas": ["mathematics", "physics", "chemistry", "biology", "computer_science"]
+    },
+    "Humanities": {
+      "agents": ["Historical Analyst", "Cultural Expert", "Critical Thinker", "Synthesizer"],
+      "focus_areas": ["history", "philosophy", "literature", "religion"]
+    },
+    "Social_Sciences": {
+      "agents": ["Social Analyst", "Economic Reasoner", "Policy Expert", "Evaluator"],
+      "focus_areas": ["psychology", "sociology", "economics", "political_science", "law"]
+    },
+    "Other": {
+      "agents": ["General Expert", "Domain Specialist", "Analyst", "Reviewer"],
+      "focus_areas": ["business", "medicine", "miscellaneous"]
+    }
+  },
+  
+  "evaluation": {
+    "metrics": ["accuracy", "confidence", "reasoning_quality", "consistency"],
+    "save_predictions": true,
+    "save_reasoning_traces": true
+  },
+  
+  "output": {
+    "save_best_models": true,
+    "save_training_history": true,
+    "save_topology_configs": true,
+    "log_level": "INFO"
+  }
+}

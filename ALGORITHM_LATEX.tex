@@ -1,0 +1,196 @@
+% NeuralFSM: Complete Algorithm LaTeX Code
+% Using algorithm2e package with clean format
+
+\documentclass[11pt,a4paper]{article}
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage{amsmath,amssymb}
+\usepackage[ruled,vlined]{algorithm2e}
+
+\begin{document}
+
+\section*{Algorithm 1: NeuralFSM Training Algorithm}
+
+\begin{algorithm}[H]
+\caption{NeuralFSM Training Algorithm (Task-Adaptive)}
+\label{alg:neuralfsm_training}
+\Require{Dataset $D = \{(q_i, a_i)\}_{i=1}^N$, domain $\text{domain}$, hyperparameters $\alpha, \beta, \gamma, \delta, \lambda$, $\text{num\_epochs}$, $\text{batch\_size}$, learning rate $lr$}
+\Ensure{Trained TGN model $\theta^*$, training metrics}
+
+\BlankLine
+\textbf{Initialization Phase}\;
+Load or generate Total FSM $F = (S, A, \delta, L, C, s_0)$\;
+Initialize TGN model $\text{TGN}_\theta$ with question embedding encoder\;
+Initialize optimizer $\text{OPT}$ (Adam, $lr$)\;
+Initialize text embedding model $E$ (SentenceTransformer)\;
+
+\BlankLine
+\textbf{Data Preparation}\;
+$D_{\text{train}}, D_{\text{val}}, D_{\text{test}} \leftarrow \text{Split}(D)$\;
+$B_{\text{train}} \leftarrow \text{Batchify}(D_{\text{train}}, \text{batch\_size})$\;
+
+\BlankLine
+\textbf{Training Loop}\;
+\For{$\text{epoch} = 1$ \textbf{to} $\text{num\_epochs}$}{
+    \ForEach{batch $B \in B_{\text{train}}$}{
+        \ForEach{question $q \in B$}{
+            $q_{\text{emb}} \leftarrow E.\text{encode\_query}(q)$ \tcp*[f]{$\triangleright$ Generate question embedding $q_{\text{emb}} \in \mathbb{R}^{384}$}
+            
+            $\text{agent\_features} \leftarrow \text{GetAgentFeatures}(\text{topology})$\;
+            $\text{context\_features} \leftarrow \text{GetContextFeatures}(\text{domain})$\;
+            
+            $\text{fsm\_outputs} \leftarrow \text{TGN}_\theta(\text{agent\_features}, \text{context\_features}, s_0, q_{\text{emb}})$ \tcp*[f]{$\triangleright$ Task-adaptive prediction: $P(\cdot|s_0, c, q_{\text{emb}})$, $w(s, a, q_{\text{emb}})$}
+            
+            $\text{fsm\_manager}.\text{reset}()$\;
+            $(\text{final\_answer}, \text{execution\_log}) \leftarrow \text{ExecuteFSMWithSampling}(\text{topology}, \text{fsm\_manager}, \text{fsm\_outputs}, q, \text{TGN}_\theta, q_{\text{emb}})$ \tcp*[f]{$\triangleright$ Probabilistic sampling of states and listeners}
+            
+            $\text{is\_correct} \leftarrow \text{CheckCorrectness}(\text{final\_answer}, \text{ground\_truth})$\;
+            $R \leftarrow 1.0$ \textbf{if} $\text{is\_correct}$ \textbf{else} $0.0$\;
+            
+            $L_{\text{policy}} \leftarrow -\log P(\tau | \theta, q_{\text{emb}}) \cdot R$ \tcp*[f]{$\triangleright$ Policy gradient loss}
+            
+            $\text{transition\_targets} \leftarrow \text{GetTransitionTargets}(\text{fsm\_manager}.\text{transition\_history})$\;
+            $L_{\text{trans}} \leftarrow 0$\;
+            \If{$\text{transition\_targets} \neq \emptyset$}{
+                $L_{\text{trans}} \leftarrow -\frac{1}{|\mathcal{T}|} \sum_{s_t \in \text{transition\_targets}} \log P(s_t | s_{t-1}, c, q_{\text{emb}}, \theta)$\;
+            }
+            \tcp*[f]{$\triangleright$ State transition loss (based on sampling, task-adaptive)}
+            
+            $\text{listener\_targets} \leftarrow \text{GetListenerTargets}(\text{fsm\_manager}.\text{listeners})$\;
+            $L_{\text{listener}} \leftarrow \text{BCE}(w(s, a, q_{\text{emb}}), \text{listener\_targets})$ \tcp*[f]{$\triangleright$ Listener path loss (based on sampling, task-adaptive)}
+            
+            $C_{\text{episode}} \leftarrow \text{ComputeEpisodeCost}(\text{execution\_log})$\;
+            $L_{\text{cost}} \leftarrow (C_{\text{episode}} - C_{\text{baseline}})^2$ \tcp*[f]{$\triangleright$ LLM cost loss}
+            
+            \If{$\text{enable\_protection}$}{
+                $L_{\text{protect}} \leftarrow \sum_{(u,v) \in E} [\text{risk}(u,v) \times \|\text{message}(u \to v)\|^2]$ \tcp*[f]{$\triangleright$ Protection loss: $\text{risk}(u,v) = 1 - \text{trust}(u)$}
+            }
+            \Else{
+                $L_{\text{protect}} \leftarrow 0$\;
+            }
+            
+            $L_{\text{total}} \leftarrow \alpha \cdot L_{\text{policy}} + \beta \cdot L_{\text{trans}} + \gamma \cdot L_{\text{listener}} + \delta \cdot L_{\text{cost}} + \lambda \cdot L_{\text{protect}}$ \tcp*[f]{$\triangleright$ Total loss}
+            
+            $\text{OPT}.\text{zero\_grad}()$\;
+            $L_{\text{total}}.\text{backward}()$\;
+            $\text{ClipGradNorm}(\text{TGN}_\theta, \text{max\_norm}=1.0)$\;
+            $\text{OPT}.\text{step}()$\;
+        }
+    }
+    
+    $\text{val\_accuracy} \leftarrow \text{Validate}(\text{TGN}_\theta, D_{\text{val}})$ \tcp*[f]{$\triangleright$ Validation phase}
+    
+    \If{$\text{val\_accuracy} > \text{best\_accuracy}$}{
+        $\text{best\_accuracy} \leftarrow \text{val\_accuracy}$\;
+        $\text{SaveModel}(\text{TGN}_\theta, \text{epoch})$\;
+    }
+}
+
+\Return{$\text{TGN}_{\theta^*}$, $\text{training\_metrics}$}
+\end{algorithm}
+
+\newpage
+
+\section*{Algorithm 2: Task-Adaptive FSM Execution Algorithm}
+
+\begin{algorithm}[H]
+\caption{Task-Adaptive FSM Execution Algorithm (Probabilistic Sampling)}
+\label{alg:fsm_execution}
+\Require{$\text{topology}$, $\text{fsm\_manager}$, $\text{fsm\_outputs}$, question $q$, $\text{TGN}_\theta$, $q_{\text{emb}}$, $\text{agent\_features}$, $\text{context\_features}$, $\text{max\_transitions} = T_{\max}$}
+\Ensure{$\text{final\_answer}$, $\text{execution\_log}$}
+
+$\text{fsm\_manager}.\text{reset}()$\;
+$s_t \leftarrow s_0$ \tcp*[f]{$\triangleright$ Initial state}
+$\text{transition\_count} \leftarrow 0$\;
+$\log P(\tau) \leftarrow 0$\;
+$\text{transition\_history} \leftarrow []$\;
+$\text{listeners} \leftarrow \{\}$\;
+
+\BlankLine
+\While{$\text{transition\_count} < T_{\max}$}{
+    $\text{current\_state} \leftarrow \text{fsm\_manager}.\text{get\_state}(s_t)$\;
+    
+    \If{$\text{TGN}_\theta \neq \text{null}$ \textbf{and} $q_{\text{emb}} \neq \text{null}$}{
+        $\text{fsm\_outputs} \leftarrow \text{TGN}_\theta(\text{agent\_features}, \text{context\_features}, s_t, q_{\text{emb}})$ \tcp*[f]{$\triangleright$ Dynamically recompute transition probabilities (task-adaptive)}
+    }
+    $\text{transition\_probs} \leftarrow \text{fsm\_outputs}[\text{'transition\_probs'}]$ \tcp*[f]{$\triangleright$ $P(\cdot|s_t, c, q_{\text{emb}})$}
+    
+    $s_{t+1} \sim \text{Multinomial}(\text{transition\_probs})$ \tcp*[f]{$\triangleright$ Probabilistic sampling: $s_{t+1} \sim P(\cdot|s_t, c, q_{\text{emb}})$}
+    $\log P(\tau) \leftarrow \log P(\tau) + \log P(s_{t+1} | s_t, c, q_{\text{emb}}, \theta)$\;
+    
+    $\text{transition\_condition} \leftarrow \text{fsm\_manager}.\text{get\_transition\_condition}(s_t, s_{t+1})$ \tcp*[f]{$\triangleright$ Match transition condition from Total FSM}
+    
+    $\text{agent\_id} \leftarrow \text{current\_state}.\text{responsible\_agent\_id}$\;
+    $\text{agent\_node} \leftarrow \text{topology}.\text{get\_agent}(\text{agent\_id})$\;
+    $\text{output} \leftarrow \text{agent\_node}.\text{execute}(q, \text{context})$\;
+    
+    \If{$\text{CheckCompletionCondition}(\text{current\_state}, \text{output})$}{
+        \If{$\text{current\_state}.\text{is\_final}$}{
+            $\text{final\_answer} \leftarrow \text{ExtractAnswer}(\text{output})$\;
+            \textbf{break}\;
+        }
+    }
+    
+    $\text{listener\_weights} \leftarrow \text{fsm\_outputs}[\text{'listener\_weights'}]$ \tcp*[f]{$\triangleright$ $w(s, a, q_{\text{emb}})$}
+    $\text{sampled\_listeners} \leftarrow \text{SampleListeners}(\text{listener\_weights}, \text{num\_samples}=3)$ \tcp*[f]{$\triangleright$ Sample listener relationships (task-adaptive)}
+    
+    \ForEach{$\text{listener\_id} \in \text{sampled\_listeners}$}{
+        $\text{agent} \leftarrow \text{topology}.\text{get\_agent}(\text{listener\_id})$\;
+        $\text{message} \leftarrow \text{FormatMessage}(\text{output}, \text{current\_state})$\;
+        $\text{agent}.\text{add\_predecessor\_message}(\text{message})$\;
+    }
+    
+    $\text{fsm\_manager}.\text{transition\_to\_state}(s_{t+1})$\;
+    $\text{fsm\_manager}.\text{set\_listeners}(s_t, \text{sampled\_listeners})$\;
+    $\text{transition\_history}.\text{append}((s_t, s_{t+1}))$\;
+    
+    $s_t \leftarrow s_{t+1}$\;
+    $\text{transition\_count} \leftarrow \text{transition\_count} + 1$\;
+}
+
+$\text{execution\_log} \leftarrow \{\log P(\tau), \text{transition\_history}, \text{listeners}, \text{final\_answer}\}$\;
+
+\Return{$(\text{final\_answer}, \text{execution\_log})$}
+\end{algorithm}
+
+\newpage
+
+\section*{Algorithm 3: Protection Mechanism Integration Algorithm}
+
+\begin{algorithm}[H]
+\caption{ProtectedTGN Forward Pass (Protection Mechanism Integration)}
+\label{alg:protection}
+\Require{$\text{agent\_features}$: $h \in \mathbb{R}^{N \times d}$, $\text{communication\_topology}$: $E \in \mathbb{R}^{2 \times M}$, $\text{question\_embedding}$: $q_{\text{emb}} \in \mathbb{R}^{384}$, $\text{current\_state\_id}$: $s_t$, $\text{context\_features}$: $c$, graph $G$, $\text{message\_counts}$: $\{\text{count}_i\}$, $\text{embeddings}$: $\{z_i\}$}
+\Ensure{$\text{protected\_outputs}$: $\{\text{agent\_features}, \text{transition\_probs}, \text{listener\_weights}\}$}
+
+$\text{priorities} \leftarrow \text{ComputeProtectionPriorities}(G)$ \tcp*[f]{$\triangleright$ Compute protection priorities: $\text{priorities}[i] = w_{\text{BC}} \cdot \text{BC}(i) + w_{\text{PR}} \cdot \text{PR}(i)$}
+
+$\text{anomaly\_scores} \leftarrow \text{ComputeAnomalyScores}(\text{message\_counts}, \text{embeddings})$ \tcp*[f]{$\triangleright$ Compute anomaly scores: $\text{anomaly\_scores}[i] = \lambda_{\text{freq}} \cdot \alpha_{\text{freq}}(i) + \lambda_{\text{semantic}} \cdot \alpha_{\text{semantic}}(i)$}
+
+\ForEach{node $i$}{
+    $\text{trust}[i] \leftarrow (1 - \text{anomaly\_scores}[i]) \cdot (1 + \text{priorities}[i])$ \tcp*[f]{$\triangleright$ Compute trust scores}
+}
+
+\ForEach{edge $(u, v) \in E$}{
+    $\text{message\_weights}[u,v] \leftarrow \text{MLP}_{\text{weight}}(\text{trust}[u], \text{priorities}[v], \text{edge\_features})$ \tcp*[f]{$\triangleright$ Compute message weights (learnable MLP)}
+}
+
+$(\text{protected\_topology}, \text{protected\_weights}) \leftarrow \text{ApplyMessageAttenuation}(\text{communication\_topology}, \text{message\_weights}, \text{threshold}=0.3)$ \tcp*[f]{$\triangleright$ Training-time defense: filter low-trust connections}
+
+\If{$\text{is\_fsm\_tgn}$}{
+    $\text{fsm\_outputs} \leftarrow \text{TGN}_\theta(\text{agent\_features}, \text{protected\_topology}, s_t, \text{context\_features}, q_{\text{emb}}, \text{transition\_history})$ \tcp*[f]{$\triangleright$ Call original TGN with question embedding}
+    
+    \If{$\text{protected\_topology}.\text{size} == \text{communication\_topology}.\text{size}$}{
+        $\text{fsm\_outputs}[\text{'agent\_features'}] \leftarrow \text{ApplyOutputAttenuation}(\text{fsm\_outputs}[\text{'agent\_features'}], \text{agent\_features}, \text{communication\_topology}, \text{message\_weights}, \text{anomaly\_scores})$ \tcp*[f]{$\triangleright$ Runtime defense: $\text{protected\_output} = \text{trust} \times \text{TGN\_output} + (1-\text{trust}) \times \text{original\_features}$}
+    }
+    
+    \Return{$\text{fsm\_outputs}$}\;
+}
+\Else{
+    $\text{output} \leftarrow \text{TGN}_\theta(\text{agent\_features}, \text{protected\_topology}, \ldots)$\;
+    $\text{output} \leftarrow \text{ApplyOutputAttenuation}(\text{output}, \text{agent\_features}, \ldots)$\;
+    \Return{$\text{output}$}\;
+}
+\end{algorithm}
+
+\end{document}

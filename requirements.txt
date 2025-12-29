@@ -1,0 +1,58 @@
+# ============================================
+# NeuralFSM 项目依赖
+# Python Version: 3.9 - 3.11 推荐
+# ============================================
+
+# ========== 核心深度学习框架 ==========
+torch>=2.0.0,<2.2.0
+torchvision>=0.15.0
+torch-geometric>=2.3.0
+numpy>=1.24.0,<2.0.0
+
+# ========== 自然语言处理 ==========
+sentence-transformers>=2.2.0
+openai>=1.0.0
+transformers>=4.30.0  # 可选，sentence-transformers依赖
+
+# ========== 数据处理 ==========
+pandas>=1.5.0
+datasets>=2.14.0  # Hugging Face datasets (MMLU下载)
+
+# ========== 图处理和可视化 ==========
+networkx>=3.0
+matplotlib>=3.7.0
+seaborn>=0.12.0
+
+# ========== 配置和工具 ==========
+pydantic>=2.0.0
+PyYAML>=6.0
+tenacity>=8.2.0  # 重试机制
+tqdm>=4.65.0  # 进度条
+psutil>=5.9.0  # 系统监控
+shortuuid>=1.0.11  # 短UUID生成
+
+# ========== 异步和并发 ==========
+asyncio>=3.4.3
+aiohttp>=3.8.0  # 异步HTTP (可选)
+
+# ========== 知识检索工具 (可选) ==========
+wikipedia>=1.4.0
+mediawikiapi>=0.4.0
+wikibase-rest-api-client>=0.1.0
+requests>=2.31.0  # HTTP请求
+
+# ========== Web服务 (可选，仅用于演示) ==========
+flask>=2.3.0
+flask-cors>=4.0.0
+flask-socketio>=5.3.0
+
+# ========== 浏览器自动化 (可选) ==========
+playwright>=1.40.0  # tools/playwright_browser.py
+
+# ========== 科学文献检索 (可选) ==========
+#arxiv>=2.0.0  # tools/arxiv_tools.py
+
+# ========== 开发和测试 (可选) ==========
+#pytest>=7.4.0
+# ipython>=8.12.0
+# jupyter>=1.0.0
