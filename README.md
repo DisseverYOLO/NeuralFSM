@@ -24,7 +24,7 @@ pip install -r requirements.txt
 
 ## Quickstart
 
-### Experiment 1 (example)
+### Main Experiments (example)
 
 ```bash
 python run_experiment_1_fsm_complete.py --domains gsm8k --dataset_root ./datasets --output_dir ./results/experiment1_fsm --num_epochs 1 --batch_size 4 --llm_name gpt-5-nano --max_transitions 8
