@@ -39,9 +39,7 @@ Experiment 1 Complete V3: Five-Objective Loss with FSM-Aware Optimization
 - V2: 策略梯度 + 状态转移 + 监听路径 (三目标)
 - V3: V2 + LLM成本 + 最大转移惩罚 (五目标) ✨ LATEST
 
-📝 详细说明见: 
-- docs/STATE_DESCRIPTION_OPTIMIZATION.md (状态描述优化)
-- docs/FSM_LOSS_FUNCTIONS_EXPLAINED.md (损失函数详解)
+
 """
 
 import asyncio
