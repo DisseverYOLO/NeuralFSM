@@ -8,7 +8,6 @@ This repository contains the **NeuralFSM** codebase for training and evaluating 
 - `run_experiment_1_fsm_complete.py`: main entry to run main Experiment 
 - `run_experiment_2_fsm_protected_v2.py`: robustness/protection experiments (attack vs. protected)
 - `neural_fsm_mas/`: NeuralFSM training/inference implementation
-- `fsm_cache/`: cached master FSM scaffolds 
 
 ## Setup
 
