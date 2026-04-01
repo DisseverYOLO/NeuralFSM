@@ -1,8 +1,8 @@
 """
 FSM Integration Module
-FSM集成模块
+FSM integration module
 
-完整集成MetaAgent的FSM生成能力和TGN学习能力
+Fully integrates MetaAgent's FSM generation capability and TGN learning capability
 """
 
 from .fsm_mas_generator import (
