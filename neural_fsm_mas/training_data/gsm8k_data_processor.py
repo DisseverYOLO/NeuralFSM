@@ -1,9 +1,9 @@
 """
 GSM8K Data Processor for Multi-Agent System Training
-GSM8K数据处理器
+GSM8K data processor
 
-专门为NeuralFSM项目优化的GSM8K数据集处理模块
-支持数学推理问题的处理，用于训练TGN网络
+GSM8K dataset processing module optimized for the NeuralFSM project.
+Supports math reasoning problem processing for TGN training.
 """
 
 import json
@@ -15,24 +15,24 @@ import random
 
 class GSM8KDataProcessor:
     """
-    GSM8K数据处理器
+    GSM8K data processor
     
-    功能：
-    1. 加载和处理GSM8K数据集
-    2. 创建训练集和验证集
-    3. 为多智能体系统准备数据格式
+    Features:
+    1. Load and process the GSM8K dataset.
+    2. Create training and validation sets.
+    3. Prepare data formats for the multi-agent system.
     """
     
     def __init__(self, data_file_path: str):
         """
-        初始化GSM8K数据处理器
+        Initialize the GSM8K data processor.
         
         Args:
-            data_file_path: GSM8K数据文件路径 (JSONL格式)
+            data_file_path: Path to the GSM8K data file (JSONL format).
         """
         self.data_file_path = Path(data_file_path)
         if not self.data_file_path.exists():
-            raise FileNotFoundError(f"GSM8K数据文件不存在: {data_file_path}")
+            raise FileNotFoundError(f"GSM8K data file does not exist: {data_file_path}")
         
         self.raw_data = []
         self.processed_data = []
@@ -41,47 +41,47 @@ class GSM8KDataProcessor:
     
     def load_gsm8k_data(self) -> List[Dict]:
         """
-        加载GSM8K数据
+        Load GSM8K data.
         
         Returns:
-            原始数据列表
+            List of raw data items.
         """
-        print(f"📂 加载GSM8K数据: {self.data_file_path}")
+        print(f"📂 Loading GSM8K data: {self.data_file_path}")
         
         with open(self.data_file_path, 'r', encoding='utf-8') as f:
             for line in f:
                 data_item = json.loads(line.strip())
                 self.raw_data.append(data_item)
         
-        print(f"✅ 加载完成: {len(self.raw_data)} 条数据")
+        print(f"✅ Loading complete: {len(self.raw_data)} records")
         return self.raw_data
     
     def process_gsm8k_data(self) -> List[Dict]:
         """
-        处理GSM8K数据（提取问题、步骤和答案）
+        Process GSM8K data by extracting questions, steps, and answers.
         
-        参考GDesigner的gsm_data_process函数
+        Based on GDesigner's `gsm_data_process` function.
         
         Returns:
-            处理后的数据列表
+            List of processed data items.
         """
         if not self.raw_data:
             self.load_gsm8k_data()
         
-        print(f"🔄 处理GSM8K数据...")
+        print("🔄 Processing GSM8K data...")
         
         for data in self.raw_data:
             item = {"task": data["question"]}
             raw_answer = data["answer"]
             
-            # 分离推理步骤和最终答案
+            # Separate reasoning steps and the final answer.
             raw_answer_list = raw_answer.split("\n####")
             item["step"] = raw_answer_list[0].strip()
             item["answer"] = raw_answer_list[-1].replace(",", "").strip()
             
             self.processed_data.append(item)
         
-        print(f"✅ 处理完成: {len(self.processed_data)} 条数据")
+        print(f"✅ Processing complete: {len(self.processed_data)} records")
         return self.processed_data
     
     def split_train_val(self, 
@@ -89,15 +89,15 @@ class GSM8KDataProcessor:
                        shuffle: bool = True,
                        random_seed: int = 42) -> Tuple[List[Dict], List[Dict]]:
         """
-        划分训练集和验证集
+        Split the dataset into training and validation sets.
         
         Args:
-            train_ratio: 训练集比例
-            shuffle: 是否打乱数据
-            random_seed: 随机种子
+            train_ratio: Training set ratio.
+            shuffle: Whether to shuffle the data.
+            random_seed: Random seed.
             
         Returns:
-            (训练集, 验证集)
+            (training_set, validation_set)
         """
         if not self.processed_data:
             self.process_gsm8k_data()
@@ -112,21 +112,21 @@ class GSM8KDataProcessor:
         self.train_data = data[:split_point]
         self.val_data = data[split_point:]
         
-        print(f"📊 数据划分完成:")
-        print(f"   训练集: {len(self.train_data)} 条")
-        print(f"   验证集: {len(self.val_data)} 条")
+        print("📊 Data split complete:")
+        print(f"   Training set: {len(self.train_data)} records")
+        print(f"   Validation set: {len(self.val_data)} records")
         
         return self.train_data, self.val_data
     
     def get_train_data(self, num_samples: Optional[int] = None) -> List[Dict]:
         """
-        获取训练数据
+        Get training data.
         
         Args:
-            num_samples: 采样数量，None表示全部
+            num_samples: Number of samples to return; `None` means all.
             
         Returns:
-            训练数据
+            Training data.
         """
         if not self.train_data:
             self.split_train_val()
@@ -138,13 +138,13 @@ class GSM8KDataProcessor:
     
     def get_val_data(self, num_samples: Optional[int] = None) -> List[Dict]:
         """
-        获取验证数据
+        Get validation data.
         
         Args:
-            num_samples: 采样数量，None表示全部
+            num_samples: Number of samples to return; `None` means all.
             
         Returns:
-            验证数据
+            Validation data.
         """
         if not self.val_data:
             self.split_train_val()
@@ -157,22 +157,24 @@ class GSM8KDataProcessor:
     @staticmethod
     def extract_answer_from_response(response: str) -> str:
         """
-        从模型响应中提取答案（参考GDesigner的gsm_get_predict函数）
+        Extract the answer from a model response.
+        
+        Based on GDesigner's `gsm_get_predict` function.
         
         Args:
-            response: 模型响应文本
+            response: Model response text.
             
         Returns:
-            提取的答案
+            Extracted answer.
         """
         pred_str = response
         
-        # 查找"The answer is"
+        # Look for "The answer is".
         if 'The answer is ' in pred_str:
             pred = pred_str.split('The answer is ')[-1].strip()
         elif 'the answer is ' in pred_str:
             pred = pred_str.split('the answer is ')[-1].strip()
-        # 查找LaTeX格式答案
+        # Look for a LaTeX-formatted answer.
         elif 'boxed' in pred_str:
             ans = pred_str.split('boxed')[-1]
             if ans[0] == '{':
@@ -194,7 +196,7 @@ class GSM8KDataProcessor:
             a = GSM8KDataProcessor._strip_string(a)
             pred = a
         else:
-            # 使用正则表达式提取数字
+            # Use a regular expression to extract numbers.
             pattern = '-?\d*\.?\d+'
             pred = re.findall(pattern, pred_str)
             if len(pred) >= 1:
@@ -210,7 +212,7 @@ class GSM8KDataProcessor:
         
         pred = GSM8KDataProcessor._strip_string(pred)
         
-        # 提取数字
+        # Extract digits.
         if pred.isdigit():
             return pred
         else:
@@ -219,7 +221,7 @@ class GSM8KDataProcessor:
     
     @staticmethod
     def _strip_string(string: str) -> str:
-        """清理字符串"""
+        """Clean a string."""
         string = string.replace("\n", "")
         string = string.replace("\\!", "")
         string = string.replace("\\\\", "\\")
@@ -251,13 +253,13 @@ class GSM8KDataProcessor:
     
     def format_for_mas_training(self, data: List[Dict]) -> List[Dict]:
         """
-        格式化数据用于多智能体系统训练
+        Format data for multi-agent system training.
         
         Args:
-            data: 原始数据
+            data: Raw data.
             
         Returns:
-            格式化后的数据
+            Formatted data.
         """
         formatted_data = []
         
@@ -274,8 +276,7 @@ class GSM8KDataProcessor:
         return formatted_data
 
 
-# 导出函数
+# Exported symbols
 __all__ = [
     'GSM8KDataProcessor'
 ]
-
