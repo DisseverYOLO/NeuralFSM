@@ -1,17 +1,17 @@
 """
 Neural Multi-Agent System Training Script
-神经多智能体系统训练脚本
+Neural multi-agent system training script
 
-整合MetaAgent和GDesigner功能，使用多数据集训练TGN网络
-支持数据集：MMLU、GSM8K、HumanEval
-学习状态转移规则和智能体通信网络
+Integrates MetaAgent and GDesigner features and trains the TGN network on multiple datasets.
+Supported datasets: MMLU, GSM8K, and HumanEval.
+Learns state-transition rules and agent communication networks.
 
-注意：这是简化版的协作式MAS训练器
-- 使用预定义的智能体配置（来自DomainPromptManager）
-- 多轮交互模式（num_rounds轮协作）
-- 策略梯度损失优化
+Note: this is a simplified collaborative MAS trainer.
+- Uses predefined agent configurations from `DomainPromptManager`
+- Multi-round interaction mode with `num_rounds` rounds of collaboration
+- Policy-gradient loss optimization
 
-如需完整的FSM自动生成功能，请使用 train_fsm_mas.py
+If you need full automatic FSM generation, use `train_fsm_mas.py`.
 """
 
 import asyncio
@@ -26,7 +26,7 @@ from pathlib import Path
 from typing import Dict, List, Any, Optional
 import numpy as np
 
-# 添加路径
+# Add paths.
 current_dir = Path(__file__).parent
 sys.path.append(str(current_dir))
 sys.path.append(str(current_dir.parent))
@@ -40,58 +40,58 @@ from baseclass.FSM_Gen import Generate_Agent_Description, Generate_State_Descrip
 
 class NeuralMASTrainer:
     """
-    神经多智能体系统训练器
+    Neural multi-agent system trainer.
     
-    核心功能：
-    1. 使用MMLU数据集训练TGN网络
-    2. 学习最优的智能体通信网络拓扑
-    3. 学习有限状态机的状态转移规则
-    4. 支持多领域的分别训练和评估
+    Core features:
+    1. Train the TGN network using MMLU data.
+    2. Learn optimal agent communication topologies.
+    3. Learn FSM state-transition rules.
+    4. Support separate training and evaluation across multiple domains.
     """
     
     def __init__(self, 
                  config: Dict[str, Any],
                  dataset_root: str = "./datasets",
                  output_dir: str = "./neural_mas_outputs",
-                 mmlu_data_path: str = None):  # 保留兼容性
+                 mmlu_data_path: str = None):  # Kept for compatibility.
         
         self.config = config
         self.dataset_root = dataset_root if not mmlu_data_path else Path(mmlu_data_path).parent.parent
         self.output_dir = Path(output_dir)
         self.output_dir.mkdir(parents=True, exist_ok=True)
         
-        # 初始化统一数据处理器
+        # Initialize the unified data processor.
         self.data_processor = UnifiedDataProcessor(str(self.dataset_root))
         
-        # 训练状态
+        # Training state.
         self.training_history = []
         self.domain_topologies = {}
         self.best_models = {}
         
-        # 设备配置
+        # Device configuration.
         self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
         print(f"Using device: {self.device}")
     
     def prepare_training_data(self, domains: List[str] = None):
         """
-        准备训练数据
+        Prepare training data.
         
         Args:
-            domains: 要准备的数据集列表，如['mmlu', 'gsm8k', 'humaneval']
-                    如果为None，则默认使用config中的domains或只使用mmlu
+            domains: List of datasets to prepare, such as `['mmlu', 'gsm8k', 'humaneval']`.
+                If `None`, default to `config['domains']` or only `mmlu`.
         """
         if domains is None:
             domains = self.config.get('domains', ['mmlu'])
         
-        print(f"🔄 准备训练数据: {', '.join(domains)}")
+        print(f"🔄 Preparing training data: {', '.join(domains)}")
         
         statistics = {}
         
         for domain in domains:
             try:
-                print(f"\n  处理 {domain.upper()}...")
+                print(f"\n  Processing {domain.upper()}...")
                 
-                # 创建数据分割
+                # Create data splits.
                 self.data_processor.create_domain_splits(
                     domain=domain,
                     train_ratio=self.config.get('train_ratio', 0.7),
@@ -100,17 +100,17 @@ class NeuralMASTrainer:
                     random_seed=self.config.get('random_seed', 42)
                 )
                 
-                # 获取统计信息
+                # Get statistics.
                 stats = self.data_processor.get_domain_statistics(domain)
                 statistics[domain] = stats[domain]
                 
                 print(f"  ✅ {domain}: {stats[domain]}")
                 
             except Exception as e:
-                print(f"  ⚠️  {domain} 准备失败: {e}")
+                print(f"  ⚠️  Failed to prepare {domain}: {e}")
                 statistics[domain] = {'error': str(e)}
         
-        print("\n📊 数据集统计汇总:")
+        print("\n📊 Dataset statistics summary:")
         for domain, stats in statistics.items():
             if 'error' not in stats:
                 print(f"  {domain.upper()}: Train={stats.get('train', 0)}, "
@@ -122,26 +122,26 @@ class NeuralMASTrainer:
     
     def create_domain_topology(self, domain: str, task_description: str = None) -> MultiAgentTopologyManager:
         """
-        为特定领域创建多智能体拓扑
+        Create a multi-agent topology for a specific domain.
         
         Args:
-            domain: 领域名称 (mmlu/gsm8k/humaneval)
-            task_description: 任务描述（可选，如果为None则自动生成）
+            domain: Domain name (`mmlu`, `gsm8k`, `humaneval`).
+            task_description: Optional task description. If `None`, it is generated automatically.
         """
-        print(f"🏗️ 为领域 {domain} 创建多智能体拓扑...")
+        print(f"🏗️ Creating multi-agent topology for domain {domain}...")
         
-        # 如果没有提供任务描述，从数据处理器获取
+        # If no task description is provided, get it from the data processor.
         if task_description is None:
             task_description = self.data_processor.get_task_description(domain)
         
-        # 优先使用领域提示集中的智能体配置
+        # Prefer agent configurations from the domain prompt set.
         try:
             prompt_set = DomainPromptManager.get_manager(domain)
             agent_names = prompt_set.get_available_roles()
-            print(f"✅ 使用预定义智能体配置: {agent_names}")
+            print(f"✅ Using predefined agent configuration: {agent_names}")
         except Exception as e:
-            print(f"⚠️ 使用LLM生成智能体...")
-            # 使用MetaAgent生成智能体描述
+            print("⚠️ Generating agents with the LLM...")
+            # Use MetaAgent to generate agent descriptions.
             available_tools = self.config.get('available_tools', [
                 'knowledge_retrieval', 'logical_reasoning', 'calculation', 'analysis'
             ])
@@ -149,13 +149,13 @@ class NeuralMASTrainer:
             try:
                 agents_description, _ = Generate_Agent_Description(task_description, available_tools)
                 agent_names = [agent['name'] for agent in agents_description]
-                print(f"✅ 生成了 {len(agent_names)} 个智能体: {agent_names}")
+                print(f"✅ Generated {len(agent_names)} agents: {agent_names}")
             except Exception as e:
-                print(f"⚠️ 智能体生成失败，使用默认配置: {e}")
-                # 使用默认智能体配置
+                print(f"⚠️ Agent generation failed, using the default configuration: {e}")
+                # Use the default agent configuration.
                 agent_names = self._get_default_agents_for_domain(domain)
         
-        # 创建多智能体拓扑管理器
+        # Create the multi-agent topology manager.
         topology_manager = MultiAgentTopologyManager(
             task_domain=domain,
             language_model_name=self.config.get('llm_name', 'gpt-5-nano'),
@@ -171,7 +171,7 @@ class NeuralMASTrainer:
         return topology_manager
     
     def _get_default_agents_for_domain(self, domain: str) -> List[str]:
-        """获取领域的默认智能体配置"""
+        """Get the default agent configuration for a domain."""
         domain_agents = {
             "mmlu": ["Knowledge Expert", "Subject Specialist", "Critical Analyzer", "Mathematician"],
             "gsm8k": ["Math Problem Solver", "Problem Analyzer", "Calculation Verifier", "Solution Critic"],
@@ -187,10 +187,10 @@ class NeuralMASTrainer:
                                   domain: str, 
                                   topology_manager: MultiAgentTopologyManager,
                                   num_epochs: int = 100) -> Dict[str, Any]:
-        """训练特定领域的拓扑结构"""
-        print(f"🎯 开始训练领域 {domain} 的拓扑结构...")
+        """Train the topology structure for a specific domain."""
+        print(f"🎯 Starting topology training for domain {domain}...")
         
-        # 准备训练数据
+        # Prepare training data.
         training_batches = self.data_processor.prepare_multi_agent_training_data(
             domain=domain,
             split="train",
@@ -203,7 +203,7 @@ class NeuralMASTrainer:
             batch_size=self.config.get('batch_size', 16)
         )
         
-        # 设置优化器
+        # Set up the optimizer.
         if topology_manager.use_neural_temporal_graph and topology_manager.neural_temporal_graph:
             model_params = (
                 list(topology_manager.neural_temporal_graph.parameters()) +
@@ -214,7 +214,7 @@ class NeuralMASTrainer:
         
         optimizer = optim.Adam(model_params, lr=self.config.get('learning_rate', 0.001))
         
-        # 训练循环
+        # Training loop.
         training_results = {
             'domain': domain,
             'epoch_losses': [],
@@ -227,22 +227,22 @@ class NeuralMASTrainer:
         for epoch in range(num_epochs):
             print(f"📚 Epoch {epoch + 1}/{num_epochs} for domain {domain}")
             
-            # 训练阶段
+            # Training phase.
             epoch_loss, epoch_accuracy = await self._train_epoch(
                 topology_manager, training_batches, optimizer, domain
             )
             
-            # 验证阶段
+            # Validation phase.
             val_accuracy = await self._validate_epoch(
                 topology_manager, validation_batches, domain
             )
             
-            # 记录结果
+            # Record results.
             training_results['epoch_losses'].append(epoch_loss)
             training_results['epoch_accuracies'].append(epoch_accuracy)
             training_results['validation_accuracies'].append(val_accuracy)
             
-            # 保存最佳模型
+            # Save the best model.
             if val_accuracy > training_results['best_accuracy']:
                 training_results['best_accuracy'] = val_accuracy
                 training_results['best_epoch'] = epoch
@@ -250,12 +250,12 @@ class NeuralMASTrainer:
             
             print(f"  📊 Train Loss: {epoch_loss:.4f}, Train Acc: {epoch_accuracy:.4f}, Val Acc: {val_accuracy:.4f}")
             
-            # 早停检查
+            # Early-stopping check.
             if self._should_early_stop(training_results, patience=10):
                 print(f"🛑 Early stopping at epoch {epoch + 1}")
                 break
         
-        print(f"✅ 完成领域 {domain} 的训练，最佳验证准确率: {training_results['best_accuracy']:.4f}")
+        print(f"✅ Finished training for domain {domain}; best validation accuracy: {training_results['best_accuracy']:.4f}")
         return training_results
     
     async def _train_epoch(self, 
@@ -263,7 +263,7 @@ class NeuralMASTrainer:
                           training_batches: List[Dict],
                           optimizer: torch.optim.Optimizer,
                           domain: str) -> tuple[float, float]:
-        """训练一个epoch"""
+        """Train one epoch."""
         
         if topology_manager.use_neural_temporal_graph and topology_manager.neural_temporal_graph:
             topology_manager.neural_temporal_graph.train()
@@ -278,27 +278,27 @@ class NeuralMASTrainer:
             batch_correct = 0
             
             for question_data in batch['questions']:
-                # 格式化问题
+                # Format the question.
                 formatted_question = self.mmlu_processor.format_question_for_agents(question_data)
                 
                 try:
-                    # 执行多智能体推理
+                    # Execute multi-agent reasoning.
                     agent_responses, log_probs = await topology_manager.execute_multi_agent_reasoning(
                         task_input=formatted_question,
                         num_interaction_rounds=self.config.get('num_rounds', 3)
                     )
                     
-                    # 评估响应
+                    # Evaluate the response.
                     if agent_responses:
                         evaluation = self.mmlu_processor.evaluate_agent_response(
                             str(agent_responses[0]), 
                             question_data.get('answer', '')
                         )
                         
-                        # 计算奖励
+                        # Compute the reward.
                         reward = 1.0 if evaluation['is_correct'] else 0.0
                         
-                        # 策略梯度损失
+                        # Policy-gradient loss.
                         loss = -log_probs * reward
                         batch_loss += loss
                         
@@ -308,10 +308,10 @@ class NeuralMASTrainer:
                     total_questions += 1
                     
                 except Exception as e:
-                    print(f"⚠️ 训练错误: {e}")
+                    print(f"⚠️ Training error: {e}")
                     continue
             
-            # 反向传播
+            # Backpropagation.
             if batch_loss != 0:
                 optimizer.zero_grad()
                 batch_loss.backward()
@@ -338,7 +338,7 @@ class NeuralMASTrainer:
                             topology_manager: MultiAgentTopologyManager,
                             validation_batches: List[Dict],
                             domain: str) -> float:
-        """验证一个epoch"""
+        """Validate one epoch."""
         
         if topology_manager.use_neural_temporal_graph and topology_manager.neural_temporal_graph:
             topology_manager.neural_temporal_graph.eval()
@@ -370,14 +370,14 @@ class NeuralMASTrainer:
                         total_questions += 1
                         
                     except Exception as e:
-                        print(f"⚠️ 验证错误: {e}")
+                        print(f"⚠️ Validation error: {e}")
                         continue
         
         accuracy = total_correct / total_questions if total_questions > 0 else 0.0
         return accuracy
     
     def _should_early_stop(self, training_results: Dict, patience: int = 10) -> bool:
-        """检查是否应该早停"""
+        """Check whether early stopping should be triggered."""
         if len(training_results['validation_accuracies']) < patience:
             return False
         
@@ -389,11 +389,11 @@ class NeuralMASTrainer:
                         domain: str,
                         epoch: int,
                         accuracy: float):
-        """保存最佳模型"""
+        """Save the best model."""
         model_dir = self.output_dir / "best_models" / domain
         model_dir.mkdir(parents=True, exist_ok=True)
         
-        # 保存模型状态
+        # Save model state.
         model_state = {
             'epoch': epoch,
             'accuracy': accuracy,
@@ -410,7 +410,7 @@ class NeuralMASTrainer:
         model_path = model_dir / f"best_model_epoch_{epoch}.pth"
         torch.save(model_state, model_path)
         
-        # 保存拓扑配置
+        # Save topology configuration.
         topology_config = {
             'agent_role_names': topology_manager.agent_role_names,
             'task_domain': topology_manager.task_domain,
@@ -421,31 +421,31 @@ class NeuralMASTrainer:
         with open(config_path, 'w', encoding='utf-8') as f:
             json.dump(topology_config, f, indent=2, ensure_ascii=False)
         
-        print(f"💾 保存最佳模型到 {model_path}")
+        print(f"💾 Saved the best model to {model_path}")
     
     async def train_all_domains(self) -> Dict[str, Dict[str, Any]]:
-        """训练所有领域"""
-        print("🚀 开始训练所有领域的神经多智能体系统...")
+        """Train all domains."""
+        print("🚀 Starting training for the neural multi-agent system across all domains...")
         
-        # 准备数据
+        # Prepare data.
         statistics = self.prepare_training_data()
         
-        # 为每个领域训练拓扑
+        # Train the topology for each domain.
         all_results = {}
         
         for domain in statistics.keys():
             print(f"\n{'='*60}")
-            print(f"🎯 开始训练领域: {domain}")
+            print(f"🎯 Starting training for domain: {domain}")
             print(f"{'='*60}")
             
-            # 创建任务描述
+            # Create the task description.
             task_description = f"Solve {domain} questions from MMLU dataset with multiple choice answers"
             
-            # 创建拓扑管理器
+            # Create the topology manager.
             topology_manager = self.create_domain_topology(domain, task_description)
             self.domain_topologies[domain] = topology_manager
             
-            # 训练
+            # Train.
             training_results = await self.train_domain_topology(
                 domain, 
                 topology_manager, 
@@ -454,16 +454,16 @@ class NeuralMASTrainer:
             
             all_results[domain] = training_results
         
-        # 保存训练历史
+        # Save training history.
         self._save_training_results(all_results)
         
         return all_results
     
     def _save_training_results(self, results: Dict[str, Dict[str, Any]]):
-        """保存训练结果"""
+        """Save training results."""
         results_path = self.output_dir / "training_results.json"
         
-        # 转换numpy数组为列表以便JSON序列化
+        # Convert NumPy arrays to lists for JSON serialization.
         serializable_results = {}
         for domain, result in results.items():
             serializable_results[domain] = {
@@ -474,35 +474,35 @@ class NeuralMASTrainer:
         with open(results_path, 'w', encoding='utf-8') as f:
             json.dump(serializable_results, f, indent=2, ensure_ascii=False)
         
-        print(f"📊 训练结果已保存到 {results_path}")
+        print(f"📊 Training results saved to {results_path}")
     
     async def evaluate_all_domains(self) -> Dict[str, float]:
-        """评估所有领域"""
-        print("🧪 开始评估所有领域...")
+        """Evaluate all domains."""
+        print("🧪 Starting evaluation for all domains...")
         
         evaluation_results = {}
         
         for domain, topology_manager in self.domain_topologies.items():
-            print(f"📝 评估领域: {domain}")
+            print(f"📝 Evaluating domain: {domain}")
             
-            # 准备测试数据
+            # Prepare test data.
             test_batches = self.mmlu_processor.prepare_multi_agent_training_data(
                 domain=domain,
                 split="test",
                 batch_size=self.config.get('batch_size', 16)
             )
             
-            # 评估
+            # Evaluate.
             test_accuracy = await self._validate_epoch(topology_manager, test_batches, domain)
             evaluation_results[domain] = test_accuracy
             
-            print(f"  📊 {domain} 测试准确率: {test_accuracy:.4f}")
+            print(f"  📊 {domain} test accuracy: {test_accuracy:.4f}")
         
         return evaluation_results
 
 
 def parse_arguments():
-    """解析命令行参数"""
+    """Parse command-line arguments."""
     parser = argparse.ArgumentParser(description="Neural Multi-Agent System Training")
     
     parser.add_argument("--mmlu_data_path", type=str, required=True,
@@ -512,7 +512,7 @@ def parse_arguments():
     parser.add_argument("--config", type=str, default=None,
                        help="Path to configuration file")
     
-    # 训练参数
+    # Training parameters.
     parser.add_argument("--num_epochs", type=int, default=50,
                        help="Number of training epochs")
     parser.add_argument("--batch_size", type=int, default=16,
@@ -522,7 +522,7 @@ def parse_arguments():
     parser.add_argument("--num_rounds", type=int, default=3,
                        help="Number of interaction rounds")
     
-    # 模型参数
+    # Model parameters.
     parser.add_argument("--memory_dim", type=int, default=128,
                        help="Memory dimension for TGN")
     parser.add_argument("--time_dim", type=int, default=32,
@@ -534,10 +534,10 @@ def parse_arguments():
 
 
 async def main():
-    """主函数"""
+    """Main function."""
     args = parse_arguments()
     
-    # 构建配置
+    # Build the configuration.
     config = {
         'num_epochs': args.num_epochs,
         'batch_size': args.batch_size,
@@ -556,18 +556,18 @@ async def main():
         ]
     }
     
-    # 如果提供了配置文件，加载配置
+    # Load configuration from file if provided.
     if args.config and os.path.exists(args.config):
         with open(args.config, 'r', encoding='utf-8') as f:
             file_config = json.load(f)
         config.update(file_config)
     
-    print("🌟 神经多智能体系统训练开始")
-    print(f"📁 MMLU数据路径: {args.mmlu_data_path}")
-    print(f"📁 输出目录: {args.output_dir}")
-    print(f"⚙️ 配置: {json.dumps(config, indent=2)}")
+    print("🌟 Neural multi-agent system training started")
+    print(f"📁 MMLU data path: {args.mmlu_data_path}")
+    print(f"📁 Output directory: {args.output_dir}")
+    print(f"⚙️ Configuration: {json.dumps(config, indent=2)}")
     
-    # 创建训练器
+    # Create the trainer.
     trainer = NeuralMASTrainer(
         config=config,
         mmlu_data_path=args.mmlu_data_path,
@@ -575,28 +575,28 @@ async def main():
     )
     
     try:
-        # 训练所有领域
+        # Train all domains.
         training_results = await trainer.train_all_domains()
         
-        # 评估所有领域
+        # Evaluate all domains.
         evaluation_results = await trainer.evaluate_all_domains()
         
-        # 打印最终结果
+        # Print the final results.
         print("\n" + "="*80)
-        print("🎉 训练完成！最终结果:")
+        print("🎉 Training complete! Final results:")
         print("="*80)
         
         for domain in training_results.keys():
             train_acc = training_results[domain]['best_accuracy']
             test_acc = evaluation_results.get(domain, 0.0)
-            print(f"📊 {domain:15} | 最佳验证准确率: {train_acc:.4f} | 测试准确率: {test_acc:.4f}")
+            print(f"📊 {domain:15} | Best validation accuracy: {train_acc:.4f} | Test accuracy: {test_acc:.4f}")
         
-        # 计算平均准确率
+        # Compute the average accuracy.
         avg_test_acc = np.mean(list(evaluation_results.values()))
-        print(f"\n🏆 平均测试准确率: {avg_test_acc:.4f}")
+        print(f"\n🏆 Average test accuracy: {avg_test_acc:.4f}")
         
     except Exception as e:
-        print(f"❌ 训练过程中出现错误: {e}")
+        print(f"❌ Error during training: {e}")
         import traceback
         traceback.print_exc()
 
