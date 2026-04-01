@@ -1,9 +1,9 @@
 """
 Agent Execution Node for Multi-Agent System
-智能体执行节点
+Agent execution node
 
-适配自原始Node实现，专门为MetaAgent项目优化
-支持时间敏感的记忆管理和智能体交互
+Adapted from the original Node implementation and optimized for the MetaAgent project.
+Supports time-sensitive memory management and agent interaction.
 """
 
 import shortuuid
@@ -18,34 +18,36 @@ from pathlib import Path
 
 from baseclass.LLM import LLM
 
-# 添加MetaAgent路径
+# Add the MetaAgent path.
 sys.path.append(str(Path(__file__).parent.parent.parent))
 
 
 class AgentExecutionNode(ABC):
     """
-    智能体执行节点
+    Agent execution node.
     
-    这个类封装了多智能体系统中单个智能体的执行逻辑，管理智能体间的连接、
-    输入输出处理以及执行分配的操作。支持个体和聚合处理模式。
+    This class encapsulates the execution logic of a single agent in a
+    multi-agent system, including inter-agent connections, input/output
+    handling, and assigned operations. It supports both individual and
+    aggregated processing modes.
     
-    核心功能：
-    1. 管理智能体间的空间和时间连接
-    2. 处理智能体的输入输出和执行逻辑
-    3. 维护时间敏感的交互记忆
-    4. 支持异步执行和推理
+    Core features:
+    1. Manage spatial and temporal connections between agents.
+    2. Handle agent inputs, outputs, and execution logic.
+    3. Maintain time-sensitive interaction memory.
+    4. Support asynchronous execution and reasoning.
     
-    属性:
-        node_id (str): 节点的唯一标识符
-        agent_role (str): 智能体角色，用于特定操作
-        spatial_predecessors (List[AgentExecutionNode]): 空间前驱节点
-        spatial_successors (List[AgentExecutionNode]): 空间后继节点
-        temporal_predecessors (List[AgentExecutionNode]): 时间前驱节点
-        temporal_successors (List[AgentExecutionNode]): 时间后继节点
-        execution_inputs (List[Any]): 待处理的输入
-        execution_outputs (List[Any]): 执行后产生的结果
-        raw_task_inputs (List[Any]): 原始输入，包含问题或任务
-        interaction_memory (Dict[str,List[Any]]): 上一时间戳的输入输出记忆
+    Attributes:
+        node_id (str): Unique identifier of the node.
+        agent_role (str): Agent role used for specialized operations.
+        spatial_predecessors (List[AgentExecutionNode]): Spatial predecessor nodes.
+        spatial_successors (List[AgentExecutionNode]): Spatial successor nodes.
+        temporal_predecessors (List[AgentExecutionNode]): Temporal predecessor nodes.
+        temporal_successors (List[AgentExecutionNode]): Temporal successor nodes.
+        execution_inputs (List[Any]): Inputs waiting to be processed.
+        execution_outputs (List[Any]): Outputs produced after execution.
+        raw_task_inputs (List[Any]): Raw inputs containing questions or tasks.
+        interaction_memory (Dict[str,List[Any]]): Input/output memory from the previous timestamp.
     """
 
     def __init__(self, 
@@ -55,20 +57,20 @@ class AgentExecutionNode(ABC):
                  llm_name: str = "",
                  **kwargs):
         """
-        初始化智能体执行节点
+        Initialize the agent execution node.
         """
         self.node_id: str = node_id if node_id is not None else shortuuid.ShortUUID().random(length=6)
         self.agent_role: str = agent_role
         self.task_domain: str = domain
         self.language_model_name: str = llm_name
         
-        # 连接管理
+        # Connection management.
         self.spatial_predecessors: List['AgentExecutionNode'] = []
         self.spatial_successors: List['AgentExecutionNode'] = []
         self.temporal_predecessors: List['AgentExecutionNode'] = []
         self.temporal_successors: List['AgentExecutionNode'] = []
         
-        # 执行相关
+        # Execution-related state.
         self.execution_inputs: List[Any] = []
         self.execution_outputs: List[Any] = []
         self.raw_task_inputs: List[Any] = []
@@ -77,23 +79,23 @@ class AgentExecutionNode(ABC):
             'inputs': [], 'outputs': [], 'raw_inputs': []
         }
         
-        # 时间敏感的记忆管理
+        # Time-sensitive memory management.
         self.interaction_memory_history: List[Dict[str, Any]] = []
         self.interaction_timestamps: List[float] = []
         self.current_interaction_round: int = 0
         self.memory_storage_capacity: int = 100
         
-        # 额外配置参数
+        # Additional configuration parameters.
         for key, value in kwargs.items():
             setattr(self, key, value)
 
     @property
     def execution_node_name(self):
-        """获取执行节点名称"""
+        """Get the execution node name."""
         return self.__class__.__name__
     
     def add_predecessor_connection(self, predecessor_node: 'AgentExecutionNode', connection_type='spatial'):
-        """添加前驱连接"""
+        """Add a predecessor connection."""
         if connection_type == 'spatial' and predecessor_node not in self.spatial_predecessors:
             self.spatial_predecessors.append(predecessor_node)
             predecessor_node.spatial_successors.append(self)
@@ -102,7 +104,7 @@ class AgentExecutionNode(ABC):
             predecessor_node.temporal_successors.append(self)
 
     def add_successor_connection(self, successor_node: 'AgentExecutionNode', connection_type='spatial'):
-        """添加后继连接"""
+        """Add a successor connection."""
         if connection_type == 'spatial' and successor_node not in self.spatial_successors:
             self.spatial_successors.append(successor_node)
             successor_node.spatial_predecessors.append(self)
@@ -111,7 +113,7 @@ class AgentExecutionNode(ABC):
             successor_node.temporal_predecessors.append(self)
 
     def remove_predecessor_connection(self, predecessor_node: 'AgentExecutionNode', connection_type='spatial'):
-        """移除前驱连接"""
+        """Remove a predecessor connection."""
         if connection_type == 'spatial' and predecessor_node in self.spatial_predecessors:
             self.spatial_predecessors.remove(predecessor_node)
             predecessor_node.spatial_successors.remove(self)
@@ -120,7 +122,7 @@ class AgentExecutionNode(ABC):
             predecessor_node.temporal_successors.remove(self)
 
     def remove_successor_connection(self, successor_node: 'AgentExecutionNode', connection_type='spatial'):
-        """移除后继连接"""
+        """Remove a successor connection."""
         if connection_type == 'spatial' and successor_node in self.spatial_successors:
             self.spatial_successors.remove(successor_node)
             successor_node.spatial_predecessors.remove(self)
@@ -129,23 +131,23 @@ class AgentExecutionNode(ABC):
             successor_node.temporal_predecessors.remove(self)
 
     def clear_spatial_connections(self):
-        """清除空间连接"""
+        """Clear spatial connections."""
         self.spatial_predecessors: List['AgentExecutionNode'] = []
         self.spatial_successors: List['AgentExecutionNode'] = []
 
     def clear_temporal_connections(self):
-        """清除时间连接"""
+        """Clear temporal connections."""
         self.temporal_predecessors: List['AgentExecutionNode'] = []
         self.temporal_successors: List['AgentExecutionNode'] = []        
     
     def update_interaction_memory(self):
-        """更新交互记忆，支持时间敏感的记忆管理"""
-        # 更新基础记忆
+        """Update interaction memory with time-sensitive tracking."""
+        # Update base memory.
         self.interaction_memory['inputs'] = self.execution_inputs.copy() if self.execution_inputs else []
         self.interaction_memory['outputs'] = self.execution_outputs.copy() if self.execution_outputs else []
         self.interaction_memory['raw_inputs'] = self.raw_task_inputs.copy() if self.raw_task_inputs else []
         
-        # 创建时间敏感的记忆快照
+        # Create a time-sensitive memory snapshot.
         current_timestamp = time.time()
         memory_snapshot = {
             'interaction_round': self.current_interaction_round,
@@ -157,28 +159,28 @@ class AgentExecutionNode(ABC):
             'temporal_connection_count': len(self.temporal_predecessors)
         }
         
-        # 添加到历史记忆
+        # Add to memory history.
         self.interaction_memory_history.append(memory_snapshot)
         self.interaction_timestamps.append(current_timestamp)
         
-        # 记忆容量管理：如果超过容量限制，移除最旧的记忆
+        # Capacity management: remove the oldest memory when the limit is exceeded.
         if len(self.interaction_memory_history) > self.memory_storage_capacity:
             self.interaction_memory_history.pop(0)
             self.interaction_timestamps.pop(0)
     
     def get_recent_interaction_memory(self, num_recent_interactions: int = 5) -> List[Dict[str, Any]]:
-        """获取最近的交互记忆"""
+        """Get recent interaction memory."""
         return self.interaction_memory_history[-num_recent_interactions:] if self.interaction_memory_history else []
     
     def get_memory_by_interaction_round(self, round_number: int) -> Optional[Dict[str, Any]]:
-        """根据交互轮次获取记忆"""
+        """Get memory by interaction round."""
         for memory in reversed(self.interaction_memory_history):
             if memory['interaction_round'] == round_number:
                 return memory
         return None
     
     def get_temporal_interaction_context(self, time_window_seconds: float = 60.0) -> List[Dict[str, Any]]:
-        """获取指定时间窗口内的交互记忆上下文"""
+        """Get interaction memory context within a given time window."""
         current_timestamp = time.time()
         temporal_memories = []
         
@@ -189,41 +191,41 @@ class AgentExecutionNode(ABC):
         return temporal_memories
     
     def reset_interaction_memory(self):
-        """重置交互记忆"""
+        """Reset interaction memory."""
         self.interaction_memory_history.clear()
         self.interaction_timestamps.clear()
         self.current_interaction_round = 0
         self.interaction_memory = {'inputs': [], 'outputs': [], 'raw_inputs': []}
     
     def set_current_interaction_round(self, round_number: int):
-        """设置当前交互轮次"""
+        """Set the current interaction round."""
         self.current_interaction_round = round_number
     
     def add_predecessor_message(self, message: str):
         """
-        添加前序智能体的消息（用于FSM监听机制）
+        Add a message from an upstream agent for the FSM listener mechanism.
         
         Args:
-            message: 前序智能体的输出消息
+            message: Output message from an upstream agent.
         """
-        # 将消息添加到执行输入中
+        # Add the message to execution inputs.
         if not hasattr(self, 'predecessor_messages'):
             self.predecessor_messages = []
         
         self.predecessor_messages.append(message)
     
     def get_predecessor_messages(self) -> List[str]:
-        """获取所有前序智能体的消息"""
+        """Get all messages from upstream agents."""
         if not hasattr(self, 'predecessor_messages'):
             self.predecessor_messages = []
         return self.predecessor_messages
     
     def clear_predecessor_messages(self):
-        """清空前序消息"""
+        """Clear upstream messages."""
         self.predecessor_messages = []
 
     def get_spatial_interaction_info(self) -> Dict[str, Dict]:
-        """获取空间交互信息"""
+        """Get spatial interaction information."""
         spatial_info = {}
         if self.spatial_predecessors is not None:
             for predecessor in self.spatial_predecessors:
@@ -235,7 +237,7 @@ class AgentExecutionNode(ABC):
         return spatial_info
 
     def get_temporal_interaction_info(self) -> Dict[str, Dict]:
-        """获取时间交互信息"""
+        """Get temporal interaction information."""
         temporal_info = {}
         if self.temporal_predecessors is not None:
             for predecessor in self.temporal_predecessors:
@@ -248,20 +250,21 @@ class AgentExecutionNode(ABC):
 
     def execute_reasoning(self, task_inputs: Any, **execution_kwargs) -> List[Any]:
         """
-        执行推理过程
+        Execute the reasoning process.
         
-        处理输入并通过节点的操作进行推理，支持个体处理模式。
+        Process inputs and perform reasoning through node operations,
+        supporting individual processing mode.
         """
         if not isinstance(task_inputs, list):
             task_inputs = [task_inputs]
         
         self.raw_task_inputs = task_inputs.copy()
         
-        # 获取空间和时间交互信息
+        # Get spatial and temporal interaction information.
         spatial_interaction_info = self.get_spatial_interaction_info()
         temporal_interaction_info = self.get_temporal_interaction_info()
         
-        # 处理输入
+        # Process inputs.
         processed_inputs = self._process_reasoning_inputs(
             task_inputs, spatial_interaction_info, temporal_interaction_info, **execution_kwargs
         )
@@ -269,7 +272,7 @@ class AgentExecutionNode(ABC):
         self.execution_inputs = processed_inputs
         execution_results = []
         
-        # 执行推理
+        # Execute reasoning.
         for single_input in processed_inputs:
             try:
                 result = self._execute_single_reasoning(single_input, **execution_kwargs)
@@ -283,18 +286,18 @@ class AgentExecutionNode(ABC):
 
     async def async_execute_reasoning(self, task_inputs: Any, **execution_kwargs) -> List[Any]:
         """
-        异步执行推理过程
+        Execute the reasoning process asynchronously.
         """
         if not isinstance(task_inputs, list):
             task_inputs = [task_inputs]
         
         self.raw_task_inputs = task_inputs.copy()
         
-        # 获取交互信息
+        # Get interaction information.
         spatial_interaction_info = self.get_spatial_interaction_info()
         temporal_interaction_info = self.get_temporal_interaction_info()
         
-        # 处理输入
+        # Process inputs.
         processed_inputs = self._process_reasoning_inputs(
             task_inputs, spatial_interaction_info, temporal_interaction_info, **execution_kwargs
         )
@@ -302,7 +305,7 @@ class AgentExecutionNode(ABC):
         self.execution_inputs = processed_inputs
         execution_results = []
         
-        # 异步执行推理
+        # Execute reasoning asynchronously.
         for single_input in processed_inputs:
             try:
                 result = await self._async_execute_single_reasoning(single_input, **execution_kwargs)
@@ -317,17 +320,19 @@ class AgentExecutionNode(ABC):
     @abstractmethod
     def _execute_single_reasoning(self, single_input: Any, **execution_kwargs) -> Any:
         """
-        执行单个输入的推理 - 抽象方法
+        Execute reasoning for a single input - abstract method.
         
-        这个方法应该在具体的智能体节点类型中实现，定义如何处理单个输入。
+        This method should be implemented by concrete agent node types to
+        define how a single input is handled.
         """
         pass
 
     async def _async_execute_single_reasoning(self, single_input: Any, **execution_kwargs) -> Any:
         """
-        异步执行单个输入的推理
+        Execute reasoning for a single input asynchronously.
         
-        默认实现调用同步版本，子类可以重写以提供真正的异步实现。
+        The default implementation calls the synchronous version. Subclasses
+        can override it to provide a truly asynchronous implementation.
         """
         return self._execute_single_reasoning(single_input, **execution_kwargs)
 
@@ -337,17 +342,18 @@ class AgentExecutionNode(ABC):
                                 temporal_interaction_info: Dict[str, Dict], 
                                 **execution_kwargs) -> List[Any]:
         """
-        处理推理输入
+        Process reasoning inputs.
         
-        这个方法整合原始输入、空间交互信息和时间交互信息，生成最终的处理输入。
-        子类可以重写此方法以实现特定的输入处理逻辑。
+        This method combines raw inputs, spatial interaction information,
+        and temporal interaction information to produce the final processed
+        inputs. Subclasses can override it to implement task-specific logic.
         """
-        # 默认实现：简单返回原始输入
-        # 子类可以重写以实现更复杂的输入融合逻辑
+        # Default implementation: simply return the raw inputs.
+        # Subclasses can override this with more complex fusion logic.
         return raw_task_inputs
 
     def get_execution_summary(self) -> Dict[str, Any]:
-        """获取执行摘要"""
+        """Get an execution summary."""
         return {
             'node_id': self.node_id,
             'agent_role': self.agent_role,
@@ -362,7 +368,7 @@ class AgentExecutionNode(ABC):
         }
 
     def validate_connections(self) -> Dict[str, bool]:
-        """验证连接的有效性"""
+        """Validate connection integrity."""
         validation_results = {
             'spatial_connections_valid': True,
             'temporal_connections_valid': True,
@@ -370,13 +376,13 @@ class AgentExecutionNode(ABC):
             'no_duplicate_connections': True
         }
         
-        # 检查是否存在自连接
+        # Check for self-connections.
         all_connections = (self.spatial_predecessors + self.spatial_successors + 
                          self.temporal_predecessors + self.temporal_successors)
         if self in all_connections:
             validation_results['no_self_connections'] = False
         
-        # 检查是否存在重复连接
+        # Check for duplicate connections.
         if (len(set(self.spatial_predecessors)) != len(self.spatial_predecessors) or
             len(set(self.spatial_successors)) != len(self.spatial_successors) or
             len(set(self.temporal_predecessors)) != len(self.temporal_predecessors) or
@@ -394,9 +400,10 @@ class AgentExecutionNode(ABC):
 
 class ConcreteAgentExecutionNode(AgentExecutionNode):
     """
-    具体的智能体执行节点实现
+    Concrete implementation of an agent execution node.
     
-    这是一个可以直接使用的智能体节点实现，提供了基本的推理执行逻辑。
+    This is a directly usable agent node implementation that provides
+    basic reasoning execution logic.
     """
     
     def __init__(self, 
@@ -407,31 +414,32 @@ class ConcreteAgentExecutionNode(AgentExecutionNode):
                  reasoning_prompt: str = "",
                  **kwargs):
         """
-        具体智能体节点，集成 baseclass.LLM 进行真实推理。
+        Concrete agent node that integrates `baseclass.LLM` for real reasoning.
         """
         super().__init__(node_id, agent_role, domain, llm_name, **kwargs)
-        # 基础系统提示
+        # Base system prompt.
         base_prompt = reasoning_prompt or f"You are a {agent_role} agent working on {domain} tasks."
         self.reasoning_prompt = base_prompt
-        # 初始化 LLM（模型名称通过 NEURALFSM_LLM_MODEL 环境变量控制）
+        # Initialize the LLM. The model name is controlled by the NEURALFSM_LLM_MODEL environment variable.
         use_azure = kwargs.get('use_azure', False)
         try:
             self.reasoning_llm = LLM(system_prompt=base_prompt, use_azure=use_azure)
         except Exception as e:
             self.reasoning_llm = None
-            warnings.warn(f"[ConcreteAgentExecutionNode] 初始化 LLM 失败 (role={agent_role}, domain={domain}): {e}")
+            warnings.warn(f"[ConcreteAgentExecutionNode] Failed to initialize LLM (role={agent_role}, domain={domain}): {e}")
     
     def _build_user_message(self, single_input: Any, is_final_state: bool = False) -> str:
         """
-        构建发给 LLM 的 user message，统一适配所有数据集。
+        Build the user message sent to the LLM in a unified format for all datasets.
         """
         problem_text = str(single_input)
 
-        # ✨ 成本优化：在FSM模式下，spatial_context和temporal_context通常为空或冗余
-        # 因为FSM已经通过listener_messages机制传递跨状态消息，避免重复传递历史信息
+        # Cost optimization: in FSM mode, spatial and temporal context are
+        # usually empty or redundant because cross-state messages are already
+        # passed through the listener_messages mechanism.
         spatial_context = ""
         temporal_context = ""
-        # 只在非FSM模式下使用spatial/temporal context（向后兼容）
+        # Use spatial/temporal context only outside FSM mode for backward compatibility.
         if not hasattr(self, '_use_fsm_mode') or not getattr(self, '_use_fsm_mode', False):
             spatial_info = self.get_spatial_interaction_info()
             temporal_info = self.get_temporal_interaction_info()
@@ -440,19 +448,19 @@ class ConcreteAgentExecutionNode(AgentExecutionNode):
             if temporal_info:
                 temporal_context = f"\n[Temporal context]: {temporal_info}\n"
         
-        # 动态监听得到的前序智能体消息（基于FSM监听关系）
+        # Dynamically collected upstream agent messages based on FSM listener relationships.
         try:
             listener_messages = self.get_predecessor_messages()
         except Exception:
             listener_messages = []
         
-        # ✨ 成本优化：限制监听消息的长度和数量，避免token爆炸
-        MAX_LISTENER_MESSAGES = 2  # 最多保留最近2条监听消息（避免上下文过长）
-        MAX_MESSAGE_LENGTH = 400  # 每条消息最多400字符（对于代码生成，保留关键部分）
+        # Cost optimization: limit listener message length and count to avoid token explosion.
+        MAX_LISTENER_MESSAGES = 2  # Keep at most the 2 most recent listener messages.
+        MAX_MESSAGE_LENGTH = 400  # Keep at most 400 characters per message.
         
         listener_context = ""
         if listener_messages:
-            # 只保留最近的N条消息，并截断过长消息
+            # Keep only the most recent N messages and truncate long ones.
             recent_messages = listener_messages[-MAX_LISTENER_MESSAGES:]
             truncated_messages = []
             for msg in recent_messages:
@@ -466,7 +474,7 @@ class ConcreteAgentExecutionNode(AgentExecutionNode):
         domain = (self.task_domain or "").lower()
         
         if is_final_state:
-            # 针对不同数据集定制最终答案格式，所有情况都必须包含 <|submit|> ANSWER
+            # Tailor final-answer formatting to each dataset.
             if domain == "gsm8k":
                 user_msg = (
                     f"You are the final '{self.agent_role}' agent in a multi-agent FSM solving a GSM8K math word problem.\n\n"
@@ -527,7 +535,7 @@ class ConcreteAgentExecutionNode(AgentExecutionNode):
                     "Replace ANSWER with the correct expression. Do NOT add any other text or explanation."
                 )
             else:
-                # 默认：短文本/数值答案
+                # Default: short text or numeric answer.
                 user_msg = (
                     f"You are the final '{self.agent_role}' agent in a multi-agent FSM for domain '{self.task_domain}'.\n\n"
                     f"Task (problem):\n{problem_text}\n\n"
@@ -538,7 +546,7 @@ class ConcreteAgentExecutionNode(AgentExecutionNode):
                     "Do NOT add any extra explanation or text before or after this line."
                 )
         else:
-            # 中间状态：鼓励链式推理，但不提交最终答案
+            # Intermediate state: encourage step-by-step reasoning without submitting a final answer.
             user_msg = (
                 f"You are '{self.agent_role}' in a multi-agent FSM for domain '{self.task_domain}'.\n\n"
                 f"Task (problem):\n{problem_text}\n\n"
@@ -550,35 +558,35 @@ class ConcreteAgentExecutionNode(AgentExecutionNode):
     
     def _execute_single_reasoning(self, single_input: Any, **execution_kwargs) -> Any:
         """
-        执行单个输入的推理：真实调用 LLM。
+        Execute reasoning for a single input by calling the LLM.
         """
         is_final_state: bool = execution_kwargs.get("is_final_state", False)
         
-        # 如果 LLM 初始化失败，退回到占位实现
+        # If LLM initialization failed, fall back to a placeholder implementation.
         if self.reasoning_llm is None:
             return f"Processed by {self.agent_role}: {single_input}"
         
         user_msg = self._build_user_message(single_input, is_final_state=is_final_state)
         try:
             response = self.reasoning_llm.chat(message=user_msg)
-            # ✨ 清理输出中的污染前缀（如 "Processed by"）
+            # Clean polluted output prefixes such as "Processed by".
             if response.startswith(f"Processed by {self.agent_role}:"):
                 response = response[len(f"Processed by {self.agent_role}:"):].strip()
             return response
         except Exception as e:
-            warnings.warn(f"[ConcreteAgentExecutionNode] LLM 推理失败 (role={self.agent_role}): {e}")
-            # ✨ 打印更详细的错误信息以便调试
-            print(f"  ⚠️ LLM 推理错误详情: {str(e)}")
+            warnings.warn(f"[ConcreteAgentExecutionNode] LLM reasoning failed (role={self.agent_role}): {e}")
+            # Print more detailed error information for debugging.
+            print(f"  ⚠️ LLM reasoning error details: {str(e)}")
             return f"Processed by {self.agent_role}: {single_input}"
     
     async def _async_execute_single_reasoning(self, single_input: Any, **execution_kwargs) -> Any:
         """
-        异步执行单个输入的推理
+        Execute reasoning for a single input asynchronously.
         """
-        # 模拟异步处理
-        await asyncio.sleep(0.1)  # 模拟处理时间
+        # Simulate asynchronous processing.
+        await asyncio.sleep(0.1)  # Simulated processing time.
         return self._execute_single_reasoning(single_input, **execution_kwargs)
 
 
-# 导出主要类
+# Export main classes
 __all__ = ['AgentExecutionNode', 'ConcreteAgentExecutionNode']
