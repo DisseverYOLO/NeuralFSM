@@ -1,8 +1,9 @@
 """
-Code Generation Agent
-Code generation agent
+Analytical Reasoning Agent
+Analytical reasoning agent
 
-Adapted from the original CodeWriting implementation and optimized for the MetaAgent project
+Adapted from the original AnalyzeAgent implementation and optimized for the MetaAgent project
+Supports analysis and reasoning for complex problems
 """
 
 from typing import List, Any, Dict
@@ -18,71 +19,97 @@ from neural_fsm_mas.reasoning_agents.agent_factory import ReasoningAgentRegistry
 from baseclass.LLM import LLM
 
 
-@ReasoningAgentRegistry.register_agent_type('code_generation')
-class CodeGenerationAgent(AgentExecutionNode):
+@ReasoningAgentRegistry.register_agent_type('analytical_reasoning')
+class AnalyticalReasoningAgent(AgentExecutionNode):
     """
-    Code generation agent
+    Analytical reasoning agent
 
-    Specialized in generating and improving code
+    Specialized in analyzing and reasoning about complex problems, supporting:
+    1. Problem decomposition and structured analysis
+    2. Multi-perspective thinking and evaluation
+    3. Logical reasoning and argumentation
+    4. Critical thinking and questioning
     """
     
     def __init__(self, 
                  node_id: str = None, 
-                 agent_role: str = "Code Generator",
-                 domain: str = "coding", 
+                 agent_role: str = "Analytical Reasoner",
+                 domain: str = "analysis", 
                  llm_name: str = "gpt-4o-mini",
                  **kwargs):
         super().__init__(node_id, agent_role, domain, llm_name, **kwargs)
         
         self.reasoning_llm = LLM(
-            system_prompt=self._get_code_generation_prompt(),
+            system_prompt=self._get_analytical_reasoning_prompt(),
             use_azure=kwargs.get('use_azure', False)
         )
         
-        self.programming_language = kwargs.get('programming_language', 'python')
+        self.analysis_depth = kwargs.get('analysis_depth', 'comprehensive')
+        self.enable_critical_thinking = kwargs.get('enable_critical_thinking', True)
     
-    def _get_code_generation_prompt(self) -> str:
-        """Get the system prompt for code generation."""
-        return f"""You are an expert code generation agent specializing in {self.programming_language}. Your role is to:
+    def _get_analytical_reasoning_prompt(self) -> str:
+        """Get the system prompt for analytical reasoning."""
+        return """You are an expert analytical reasoning agent. Your role is to:
 
-1. Generate clean, efficient, and well-documented code
-2. Follow best practices and coding standards
-3. Implement proper error handling
-4. Write comprehensive comments and documentation
-5. Optimize code for readability and performance
+1. Break down complex problems into manageable components
+2. Analyze problems from multiple perspectives
+3. Apply logical reasoning and critical thinking
+4. Identify assumptions, biases, and potential issues
+5. Synthesize information from various sources
+6. Provide well-structured and evidence-based conclusions
 
 Guidelines:
-- Write production-quality code
-- Include proper imports and dependencies
-- Add meaningful variable and function names
-- Implement error handling where appropriate
-- Provide clear code comments and documentation"""
+- Use systematic analytical frameworks
+- Consider both quantitative and qualitative aspects
+- Question assumptions and challenge conventional thinking
+- Look for patterns, relationships, and underlying principles
+- Evaluate the strength of evidence and arguments
+- Consider alternative explanations and solutions"""
     
     def _execute_single_reasoning(self, reasoning_context: Dict[str, Any], **execution_kwargs) -> Any:
-        """Execute code generation."""
+        """Execute a single analytical reasoning task."""
         problem = reasoning_context['problem']
         spatial_context = reasoning_context.get('spatial_context', '')
+        temporal_context = reasoning_context.get('temporal_context', '')
         
-        code_prompt = f"""Code Generation Task: {problem}
-
-Programming Language: {self.programming_language}
-
-Additional Context from Other Agents:
-{spatial_context}
-
-Please generate clean, well-documented code that solves the given task."""
+        analysis_prompt = self._build_analytical_prompt(problem, spatial_context, temporal_context)
         
         try:
-            code_result = self.reasoning_llm.chat(message=code_prompt)
-            return {
-                'generated_code': code_result,
-                'programming_language': self.programming_language,
-                'problem': problem,
-                'agent_role': self.agent_role
-            }
+            analysis_result = self.reasoning_llm.chat(message=analysis_prompt)
+            return self._structure_analysis_result(analysis_result, problem)
         except Exception as e:
-            return {"error": f"Code generation failed: {str(e)}", "problem": problem}
+            return {"error": f"Analytical reasoning failed: {str(e)}", "problem": problem}
+    
+    def _build_analytical_prompt(self, problem: str, spatial_context: str, temporal_context: str) -> str:
+        """Build the analytical reasoning prompt."""
+        prompt_parts = [f"Problem for Analysis: {problem}"]
+        
+        if spatial_context:
+            prompt_parts.append(f"\nCurrent perspectives from other agents:\n{spatial_context}")
+        
+        if temporal_context:
+            prompt_parts.append(f"\nPrevious analysis:\n{temporal_context}")
+        
+        prompt_parts.extend([
+            "\nPlease provide a comprehensive analysis including:",
+            "1. Problem decomposition and key components",
+            "2. Multiple perspectives and viewpoints",
+            "3. Logical reasoning and evidence evaluation",
+            "4. Potential assumptions and limitations",
+            "5. Synthesis and conclusions"
+        ])
+        
+        return "\n".join(prompt_parts)
+    
+    def _structure_analysis_result(self, raw_result: str, problem: str) -> Dict[str, Any]:
+        """Structure the analysis result."""
+        return {
+            'analysis': raw_result,
+            'problem': problem,
+            'agent_role': self.agent_role,
+            'analysis_type': 'comprehensive_analytical_reasoning'
+        }
 
 
 # Export main class
-__all__ = ['CodeGenerationAgent']
+__all__ = ['AnalyticalReasoningAgent']
