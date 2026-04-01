@@ -1,15 +1,15 @@
 """
 Adversarial Reasoning Agent
-对抗推理智能体
+Adversarial reasoning agent
 
-适配自原始AdversarialAgent实现，专门为MetaAgent项目优化
+Adapted from the original AdversarialAgent implementation and optimized for the MetaAgent project
 """
 
 from typing import List, Any, Dict
 import sys
 from pathlib import Path
 
-# 添加MetaAgent路径
+# Add MetaAgent path
 sys.path.append(str(Path(__file__).parent.parent.parent))
 sys.path.append(str(Path(__file__).parent.parent))
 
@@ -21,9 +21,9 @@ from baseclass.LLM import LLM
 @ReasoningAgentRegistry.register_agent_type('adversarial_reasoning')
 class AdversarialReasoningAgent(AgentExecutionNode):
     """
-    对抗推理智能体
-    
-    专门用于质疑和挑战其他智能体的推理，提供反向思考
+    Adversarial reasoning agent
+
+    Specialized in questioning and challenging other agents' reasoning to provide counter-perspectives
     """
     
     def __init__(self, 
@@ -40,7 +40,7 @@ class AdversarialReasoningAgent(AgentExecutionNode):
         )
     
     def _get_adversarial_reasoning_prompt(self) -> str:
-        """获取对抗推理的系统提示"""
+        """Get the system prompt for adversarial reasoning."""
         return """You are an adversarial reasoning agent. Your role is to:
 
 1. Challenge and question other agents' reasoning
@@ -58,7 +58,7 @@ Guidelines:
 - Help improve the overall quality of reasoning"""
     
     def _execute_single_reasoning(self, reasoning_context: Dict[str, Any], **execution_kwargs) -> Any:
-        """执行对抗推理"""
+        """Execute adversarial reasoning."""
         problem = reasoning_context['problem']
         spatial_context = reasoning_context.get('spatial_context', '')
         
@@ -85,5 +85,5 @@ As an adversarial reasoner, please:
             return {"error": f"Adversarial reasoning failed: {str(e)}", "problem": problem}
 
 
-# 导出主要类
+# Export main class
 __all__ = ['AdversarialReasoningAgent']
