@@ -1,9 +1,9 @@
 """
 MMLU Data Processor for Multi-Agent System Training
-MMLU数据处理器
+MMLU data processor
 
-专门为MetaAgent项目优化的MMLU数据集处理模块
-支持按领域划分训练集和验证集，用于训练TGN网络
+MMLU dataset processing module optimized for the MetaAgent project.
+Supports domain-based train/validation splitting for TGN training.
 """
 
 import json
@@ -18,13 +18,13 @@ from collections import defaultdict
 
 class MMLUDataProcessor:
     """
-    MMLU数据处理器
+    MMLU data processor
     
-    功能：
-    1. 加载和处理MMLU数据集
-    2. 按学科领域划分数据
-    3. 创建训练集和验证集
-    4. 为多智能体系统准备数据格式
+    Features:
+    1. Load and process the MMLU dataset.
+    2. Organize data by subject domain.
+    3. Create training and validation sets.
+    4. Prepare data formats for the multi-agent system.
     """
     
     def __init__(self, data_root_path: str):
@@ -34,7 +34,7 @@ class MMLUDataProcessor:
         self.domain_splits = {}
         
     def _define_subject_categories(self) -> Dict[str, List[str]]:
-        """定义学科分类"""
+        """Define subject categories."""
         return {
             "STEM": [
                 "abstract_algebra", "anatomy", "astronomy", "college_biology",
@@ -68,30 +68,30 @@ class MMLUDataProcessor:
     
     def load_mmlu_data(self, split: str = "test") -> Dict[str, List[Dict]]:
         """
-        加载MMLU数据
+        Load MMLU data.
         
         Args:
-            split: 数据集分割 ("test", "dev", "val")
+            split: Dataset split ("test", "dev", "val").
             
         Returns:
-            按学科组织的数据字典
+            Dictionary of data organized by subject.
         """
         data_by_subject = {}
         
-        # 查找数据文件
+        # Locate data files.
         data_dir = self.data_root_path / split
         if not data_dir.exists():
             raise FileNotFoundError(f"MMLU data directory not found: {data_dir}")
         
-        # 加载每个学科的数据
+        # Load data for each subject.
         for csv_file in data_dir.glob("*.csv"):
             subject_name = csv_file.stem
             
             try:
-                # 读取CSV文件
+                # Read the CSV file.
                 df = pd.read_csv(csv_file, header=None)
                 
-                # 转换为标准格式
+                # Convert to the standard format.
                 subject_data = []
                 for _, row in df.iterrows():
                     question_data = {
@@ -115,13 +115,13 @@ class MMLUDataProcessor:
     
     def organize_by_domain(self, split: str = "test") -> Dict[str, List[Dict]]:
         """
-        按领域组织数据
+        Organize data by domain.
         
         Args:
-            split: 数据集分割
+            split: Dataset split.
             
         Returns:
-            按领域组织的数据字典
+            Dictionary of data organized by domain.
         """
         if split not in self.processed_data:
             self.load_mmlu_data(split)
@@ -129,11 +129,11 @@ class MMLUDataProcessor:
         domain_data = defaultdict(list)
         
         for subject, questions in self.processed_data[split].items():
-            # 找到学科所属的领域
+            # Find the domain for each subject.
             domain = self._get_subject_domain(subject)
             domain_data[domain].extend(questions)
         
-        # 转换为普通字典并打印统计信息
+        # Convert to a regular dictionary and print statistics.
         domain_data = dict(domain_data)
         for domain, questions in domain_data.items():
             print(f"Domain {domain}: {len(questions)} questions")
@@ -141,11 +141,11 @@ class MMLUDataProcessor:
         return domain_data
     
     def _get_subject_domain(self, subject: str) -> str:
-        """获取学科所属领域"""
+        """Get the domain that a subject belongs to."""
         for domain, subjects in self.subject_categories.items():
             if subject in subjects:
                 return domain
-        return "Other"  # 默认分类
+        return "Other"  # Default category.
     
     def create_domain_splits(self, 
                            train_ratio: float = 0.7,
@@ -153,27 +153,27 @@ class MMLUDataProcessor:
                            test_ratio: float = 0.15,
                            random_seed: int = 42) -> Dict[str, Dict[str, List[Dict]]]:
         """
-        为每个领域创建训练/验证/测试分割
+        Create train/validation/test splits for each domain.
         
         Args:
-            train_ratio: 训练集比例
-            val_ratio: 验证集比例
-            test_ratio: 测试集比例
-            random_seed: 随机种子
+            train_ratio: Training set ratio.
+            val_ratio: Validation set ratio.
+            test_ratio: Test set ratio.
+            random_seed: Random seed.
             
         Returns:
-            按领域和分割组织的数据字典
+            Dictionary organized by domain and split.
         """
-        # 设置随机种子
+        # Set random seeds.
         random.seed(random_seed)
         np.random.seed(random_seed)
         
-        # 确保比例和为1
+        # Ensure the ratios sum to 1.
         total_ratio = train_ratio + val_ratio + test_ratio
         if abs(total_ratio - 1.0) > 1e-6:
             raise ValueError(f"Ratios must sum to 1.0, got {total_ratio}")
         
-        # 加载所有可用的数据
+        # Load all available data.
         all_splits = ["test", "dev", "val"]
         all_domain_data = defaultdict(list)
         
@@ -186,18 +186,18 @@ class MMLUDataProcessor:
                 print(f"Split {split} not found, skipping...")
                 continue
         
-        # 为每个领域创建分割
+        # Create splits for each domain.
         domain_splits = {}
         
         for domain, all_questions in all_domain_data.items():
-            # 随机打乱数据
+            # Shuffle the data.
             random.shuffle(all_questions)
             
             total_questions = len(all_questions)
             train_size = int(total_questions * train_ratio)
             val_size = int(total_questions * val_ratio)
             
-            # 分割数据
+            # Split the data.
             train_data = all_questions[:train_size]
             val_data = all_questions[train_size:train_size + val_size]
             test_data = all_questions[train_size + val_size:]
@@ -218,15 +218,15 @@ class MMLUDataProcessor:
                                         split: str = "train",
                                         batch_size: int = 32) -> List[Dict[str, Any]]:
         """
-        为多智能体系统准备训练数据
+        Prepare training data for the multi-agent system.
         
         Args:
-            domain: 领域名称
-            split: 数据分割 ("train", "validation", "test")
-            batch_size: 批次大小
+            domain: Domain name.
+            split: Data split ("train", "validation", "test").
+            batch_size: Batch size.
             
         Returns:
-            多智能体训练数据批次列表
+            List of multi-agent training data batches.
         """
         if not self.domain_splits:
             self.create_domain_splits()
@@ -239,7 +239,7 @@ class MMLUDataProcessor:
         
         questions = self.domain_splits[domain][split]
         
-        # 创建批次
+        # Create batches.
         batches = []
         for i in range(0, len(questions), batch_size):
             batch_questions = questions[i:i + batch_size]
@@ -258,13 +258,13 @@ class MMLUDataProcessor:
     
     def format_question_for_agents(self, question_data: Dict[str, Any]) -> Dict[str, str]:
         """
-        将问题格式化为智能体可处理的格式
+        Format a question into a structure the agents can process.
         
         Args:
-            question_data: 原始问题数据
+            question_data: Raw question data.
             
         Returns:
-            格式化后的问题数据
+            Formatted question data.
         """
         choices_text = "\n".join([
             f"A) {question_data['choices'][0]}",
@@ -294,19 +294,19 @@ Please select the best answer (A, B, C, or D) and provide your reasoning."""
                                agent_response: str, 
                                correct_answer: str) -> Dict[str, Any]:
         """
-        评估智能体响应
+        Evaluate an agent response.
         
         Args:
-            agent_response: 智能体的响应
-            correct_answer: 正确答案
+            agent_response: Agent response.
+            correct_answer: Correct answer.
             
         Returns:
-            评估结果
+            Evaluation result.
         """
-        # 从响应中提取答案
+        # Extract the answer from the response.
         predicted_answer = self._extract_answer_from_response(agent_response)
         
-        # 计算准确性
+        # Compute accuracy.
         is_correct = predicted_answer.upper() == correct_answer.upper()
         
         return {
@@ -317,10 +317,10 @@ Please select the best answer (A, B, C, or D) and provide your reasoning."""
         }
     
     def _extract_answer_from_response(self, response: str) -> str:
-        """从响应中提取答案"""
+        """Extract an answer from a response."""
         import re
         
-        # 查找答案模式
+        # Search for answer patterns.
         patterns = [
             r'(?:answer|choice|select|option)(?:\s+is\s+|\s*:\s*)([A-D])',
             r'([A-D])\)',
@@ -335,12 +335,12 @@ Please select the best answer (A, B, C, or D) and provide your reasoning."""
             if matches:
                 return matches[0]
         
-        # 如果没找到明确的答案，返回最常见的字母
+        # If no explicit answer is found, return the most common letter.
         letter_counts = {letter: response_upper.count(letter) for letter in 'ABCD'}
         return max(letter_counts, key=letter_counts.get)
     
     def _estimate_response_confidence(self, response: str) -> float:
-        """估计响应的置信度"""
+        """Estimate the confidence level of a response."""
         confidence_keywords = {
             'high': ['certain', 'definitely', 'clearly', 'obviously', 'undoubtedly'],
             'medium': ['likely', 'probably', 'seems', 'appears'],
@@ -360,14 +360,14 @@ Please select the best answer (A, B, C, or D) and provide your reasoning."""
         elif low_count > 0:
             return 0.4
         else:
-            return 0.6  # 默认中等置信度
+            return 0.6  # Default medium confidence.
     
     def save_processed_data(self, output_path: str):
-        """保存处理后的数据"""
+        """Save processed data."""
         output_path = Path(output_path)
         output_path.mkdir(parents=True, exist_ok=True)
         
-        # 保存领域分割数据
+        # Save domain split data.
         if self.domain_splits:
             for domain, splits in self.domain_splits.items():
                 domain_file = output_path / f"{domain}_splits.json"
@@ -375,7 +375,7 @@ Please select the best answer (A, B, C, or D) and provide your reasoning."""
                     json.dump(splits, f, indent=2, ensure_ascii=False)
                 print(f"Saved {domain} data to {domain_file}")
         
-        # 保存配置信息
+        # Save configuration information.
         config = {
             "data_root_path": str(self.data_root_path),
             "subject_categories": self.subject_categories,
@@ -389,17 +389,17 @@ Please select the best answer (A, B, C, or D) and provide your reasoning."""
         print(f"Saved configuration to {config_file}")
     
     def load_processed_data(self, input_path: str):
-        """加载处理后的数据"""
+        """Load processed data."""
         input_path = Path(input_path)
         
-        # 加载配置
+        # Load configuration.
         config_file = input_path / "mmlu_config.json"
         if config_file.exists():
             with open(config_file, 'r', encoding='utf-8') as f:
                 config = json.load(f)
             self.subject_categories = config.get("subject_categories", {})
         
-        # 加载领域分割数据
+        # Load domain split data.
         self.domain_splits = {}
         for json_file in input_path.glob("*_splits.json"):
             domain = json_file.stem.replace("_splits", "")
@@ -409,7 +409,7 @@ Please select the best answer (A, B, C, or D) and provide your reasoning."""
         print(f"Loaded data for domains: {list(self.domain_splits.keys())}")
     
     def get_domain_statistics(self) -> Dict[str, Dict[str, int]]:
-        """获取领域统计信息"""
+        """Get domain statistics."""
         if not self.domain_splits:
             return {}
         
@@ -423,9 +423,9 @@ Please select the best answer (A, B, C, or D) and provide your reasoning."""
         return statistics
 
 
-# 便捷函数
+# Convenience functions
 def create_mmlu_processor(data_root_path: str) -> MMLUDataProcessor:
-    """创建MMLU数据处理器"""
+    """Create an MMLU data processor."""
     return MMLUDataProcessor(data_root_path)
 
 
@@ -434,14 +434,14 @@ def prepare_mmlu_training_data(data_root_path: str,
                               train_ratio: float = 0.7,
                               val_ratio: float = 0.15,
                               test_ratio: float = 0.15) -> MMLUDataProcessor:
-    """准备MMLU训练数据的便捷函数"""
+    """Convenience function for preparing MMLU training data."""
     processor = MMLUDataProcessor(data_root_path)
     processor.create_domain_splits(train_ratio, val_ratio, test_ratio)
     processor.save_processed_data(output_path)
     return processor
 
 
-# 导出主要类和函数
+# Export main classes and functions
 __all__ = [
     'MMLUDataProcessor',
     'create_mmlu_processor',
