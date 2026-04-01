@@ -1,15 +1,15 @@
 """
 Decision Making Agent
-决策制定智能体
+Decision-making agent
 
-适配自原始FinalDecision实现，专门为MetaAgent项目优化
+Adapted from the original FinalDecision implementation and optimized for the MetaAgent project
 """
 
 from typing import List, Any, Dict
 import sys
 from pathlib import Path
 
-# 添加MetaAgent路径
+# Add MetaAgent path
 sys.path.append(str(Path(__file__).parent.parent.parent))
 sys.path.append(str(Path(__file__).parent.parent))
 
@@ -21,9 +21,9 @@ from baseclass.LLM import LLM
 @ReasoningAgentRegistry.register_agent_type('final_decision')
 class DecisionMakingAgent(AgentExecutionNode):
     """
-    决策制定智能体
-    
-    负责综合所有智能体的输出，做出最终决策
+    Decision-making agent
+
+    Responsible for synthesizing outputs from all agents and making the final decision
     """
     
     def __init__(self, 
@@ -40,7 +40,7 @@ class DecisionMakingAgent(AgentExecutionNode):
         )
     
     def _get_decision_making_prompt(self) -> str:
-        """获取决策制定的系统提示"""
+        """Get the system prompt for decision making."""
         return """You are the final decision-making agent. Your role is to:
 
 1. Synthesize all available information from other agents
@@ -57,7 +57,7 @@ Guidelines:
 - Provide clear, actionable final answers"""
     
     def _execute_single_reasoning(self, reasoning_context: Dict[str, Any], **execution_kwargs) -> Any:
-        """执行决策制定"""
+        """Execute decision making."""
         problem = reasoning_context['problem']
         spatial_context = reasoning_context.get('spatial_context', '')
         
@@ -79,5 +79,5 @@ Based on all the above information, please make a final decision and provide you
             return {"error": f"Decision making failed: {str(e)}", "problem": problem}
 
 
-# 导出主要类
+# Export main class
 __all__ = ['DecisionMakingAgent']
