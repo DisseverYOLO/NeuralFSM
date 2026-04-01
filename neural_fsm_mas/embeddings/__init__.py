@@ -1,5 +1,5 @@
 """
-文本嵌入模块
+Text Embedding Module
 """
 
 from .text_embedding import (
@@ -13,4 +13,3 @@ __all__ = [
     'get_embedding_model',
     'get_sentence_embedding'
 ]
-
