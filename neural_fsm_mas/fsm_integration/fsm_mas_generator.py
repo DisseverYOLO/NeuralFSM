@@ -1,26 +1,10 @@
 """
 FSM Multi-Agent System Generator
-FSM多智能体系统生成器
+FSM multi-agent system generator
 
-完整集成MetaAgent的智能体生成和FSM生成能力
-支持随机采样拓扑图并用TGN学习最优路径
+Fully integrates MetaAgent's agent generation and FSM generation capabilities
+Supports random topology sampling and uses TGN to learn optimal paths
 
-🎯 核心架构说明：
------------------
-1. 本模块负责生成FSM多智能体系统的初始结构
-2. 随机采样状态转移和通信拓扑作为学习的起点
-3. 提供MSE重构损失作为辅助正则化项，帮助TGN学习稳定的节点表示
-4. ⚠️ TGN参数的实际优化由train_neural_mas.py中的组合损失完成
-
-损失函数设计（多任务学习）：
-- 主损失：策略梯度损失（基于MMLU准确率，任务导向）
-- 辅助损失：MSE重构损失（稳定训练，正则化节点表示）
-- 组合损失：total_loss = α * policy_gradient_loss + β * reconstruction_loss
-
-正确的训练流程：
-- 生成FSM-MAS系统（本模块）
-- 使用MMLU数据训练，组合损失优化TGN参数（train_neural_mas.py）
-- 策略梯度确保任务性能，MSE损失提供稳定梯度信号
 """
 
 import json
@@ -32,7 +16,7 @@ from typing import Dict, List, Any, Tuple, Optional
 import sys
 from pathlib import Path
 
-# 添加路径
+# Add path
 sys.path.append(str(Path(__file__).parent.parent.parent))
 sys.path.append(str(Path(__file__).parent.parent))
 
@@ -45,13 +29,13 @@ from neural_fsm_mas.embeddings import get_embedding_model
 
 class FSMMultiAgentSystemGenerator:
     """
-    FSM多智能体系统生成器
-    
-    核心功能：
-    1. 使用MetaAgent生成智能体描述和FSM状态
-    2. 随机采样状态转移拓扑图
-    3. 随机采样Listening智能体通信拓扑图
-    4. 使用TGN学习最优的状态转移路径和通信路径
+    FSM multi-agent system generator
+
+    Core features:
+    1. Use MetaAgent to generate agent descriptions and FSM states
+    2. Randomly sample the state transition topology
+    3. Randomly sample the listening-agent communication topology
+    4. Use TGN to learn optimal state transition and communication paths
     """
     
     def __init__(self, 
@@ -65,18 +49,18 @@ class FSMMultiAgentSystemGenerator:
         self.memory_dimension = memory_dimension
         self.temporal_dimension = temporal_dimension
         
-        # 设置随机种子
+        # Set random seed
         random.seed(random_seed)
         np.random.seed(random_seed)
         torch.manual_seed(random_seed)
         
-        # 初始化嵌入模型（参考GDesigner）
-        print(f"🔤 初始化文本嵌入模型...")
+        # Initialize the embedding model (following GDesigner)
+        print(f"🔤 Initializing text embedding model...")
         self.embedding_model = get_embedding_model(embedding_model_name)
         self.embedding_dim = self.embedding_model.embedding_dim
-        print(f"✅ 嵌入模型加载完成，维度: {self.embedding_dim}")
+        print(f"✅ Embedding model loaded, dimension: {self.embedding_dim}")
         
-        # 存储生成的组件
+        # Store generated components
         self.generated_agents = None
         self.generated_fsm = None
         self.state_topology_graph = None
@@ -88,53 +72,53 @@ class FSMMultiAgentSystemGenerator:
                                  task_description: str,
                                  available_tools: List[str] = None) -> Dict[str, Any]:
         """
-        生成完整的FSM多智能体系统
+        Generate a complete FSM multi-agent system.
         
         Args:
-            task_description: 任务描述
-            available_tools: 可用工具列表
+            task_description: Task description
+            available_tools: List of available tools
             
         Returns:
-            完整的FSM-MAS系统配置
+            Complete FSM-MAS system configuration
         """
-        print("🚀 开始生成FSM多智能体系统...")
+        print("🚀 Starting generation of FSM multi-agent system...")
         
-        # 默认工具列表
+        # Default tool list
         if available_tools is None:
             available_tools = [
                 "code_interpreter", "web_search", "calculator", 
                 "knowledge_retrieval", "logical_reasoning", "analysis"
             ]
         
-        # Step 1: 使用MetaAgent生成智能体描述
-        print("🤖 Step 1: 生成智能体角色描述...")
+        # Step 1: Use MetaAgent to generate agent descriptions
+        print("🤖 Step 1: Generating agent role descriptions...")
         self.generated_agents, _ = Generate_Agent_Description(task_description, available_tools)
-        print(f"✅ 生成了 {len(self.generated_agents)} 个智能体")
+        print(f"✅ Generated {len(self.generated_agents)} agents")
         
-        # Step 2: 使用MetaAgent生成FSM状态
-        print("🔄 Step 2: 生成有限状态机...")
+        # Step 2: Use MetaAgent to generate FSM states
+        print("🔄 Step 2: Generating finite-state machine...")
         self.generated_fsm, _ = Generate_FSM(task_description, self.generated_agents)
         if self.generated_fsm is None:
-            raise ValueError("FSM生成失败")
-        print(f"✅ 生成了 {len(self.generated_fsm['states'])} 个状态")
+            raise ValueError("FSM generation failed")
+        print(f"✅ Generated {len(self.generated_fsm['states'])} states")
         
-        # Step 3: 随机采样状态转移拓扑图
-        print("🕸️ Step 3: 随机采样状态转移拓扑图...")
+        # Step 3: Randomly sample the state transition topology
+        print("🕸️ Step 3: Randomly sampling the state transition topology...")
         self.state_topology_graph = self._sample_state_transition_topology()
-        print(f"✅ 采样了状态转移拓扑，包含 {len(self.state_topology_graph.edges)} 条边")
+        print(f"✅ Sampled the state transition topology with {len(self.state_topology_graph.edges)} edges")
         
-        # Step 4: 随机采样Listening智能体通信拓扑图
-        print("📡 Step 4: 随机采样Listening智能体通信拓扑图...")
+        # Step 4: Randomly sample the listening-agent communication topology
+        print("📡 Step 4: Randomly sampling the listening-agent communication topology...")
         self.listening_topology_graph = self._sample_listening_communication_topology()
-        print(f"✅ 采样了通信拓扑，包含 {len(self.listening_topology_graph.edges)} 条边")
+        print(f"✅ Sampled the communication topology with {len(self.listening_topology_graph.edges)} edges")
         
-        # Step 5: 如果启用神经学习，创建TGN学习器
+        # Step 5: If neural learning is enabled, create TGN learners
         if self.use_neural_learning:
-            print("🧠 Step 5: 初始化TGN神经学习器...")
+            print("🧠 Step 5: Initializing TGN neural learners...")
             self._initialize_neural_learners()
-            print("✅ TGN学习器初始化完成")
+            print("✅ TGN learners initialized")
         
-        # 构建完整系统配置
+        # Build the complete system configuration
         fsm_mas_config = {
             "task_description": task_description,
             "agents": self.generated_agents,
@@ -151,19 +135,19 @@ class FSMMultiAgentSystemGenerator:
             }
         }
         
-        print("🎉 FSM多智能体系统生成完成！")
+        print("🎉 FSM multi-agent system generation completed!")
         return fsm_mas_config
     
     def _sample_state_transition_topology(self) -> nx.DiGraph:
         """
-        随机采样状态转移拓扑图
+        Randomly sample the state transition topology.
         
-        基于原始FSM的转移关系，添加随机的额外连接
+        Add random extra connections based on the original FSM transitions.
         """
-        # 创建有向图
+        # Create a directed graph
         G = nx.DiGraph()
         
-        # 添加所有状态作为节点
+        # Add all states as nodes
         states = self.generated_fsm['states']
         for state in states:
             G.add_node(state['state_id'], 
@@ -172,14 +156,14 @@ class FSMMultiAgentSystemGenerator:
                       is_initial=state['is_initial'],
                       is_final=state['is_final'])
         
-        # 添加原始转移关系
+        # Add the original transition relations
         for transition in self.generated_fsm['transitions']:
             G.add_edge(transition['from_state'], 
                       transition['to_state'],
                       condition=transition['condition'],
                       edge_type='original')
         
-        # 随机添加额外的转移连接（用于学习）
+        # Randomly add extra transition connections (for learning)
         state_ids = [state['state_id'] for state in states]
         num_additional_edges = random.randint(1, len(state_ids) // 2)
         
@@ -187,7 +171,7 @@ class FSMMultiAgentSystemGenerator:
             from_state = random.choice(state_ids)
             to_state = random.choice(state_ids)
             
-            # 避免自环和重复边
+            # Avoid self-loops and duplicate edges
             if from_state != to_state and not G.has_edge(from_state, to_state):
                 G.add_edge(from_state, to_state,
                           condition="learnable_transition",
@@ -197,32 +181,32 @@ class FSMMultiAgentSystemGenerator:
     
     def _sample_listening_communication_topology(self) -> nx.Graph:
         """
-        随机采样Listening智能体通信拓扑图
+        Randomly sample the listening-agent communication topology.
         
-        基于FSM中的listener关系，添加随机的通信连接
+        Add random communication connections based on listener relations in the FSM.
         """
-        # 创建无向图（通信是双向的）
+        # Create an undirected graph (communication is bidirectional)
         G = nx.Graph()
         
-        # 添加所有智能体作为节点
+        # Add all agents as nodes
         for agent in self.generated_agents:
             G.add_node(agent['agent_id'], 
                       name=agent['name'],
                       system_prompt=agent['system_prompt'],
                       tools=agent['tools'])
         
-        # 基于FSM中的listener关系添加通信边
+        # Add communication edges based on listener relations in the FSM
         for state in self.generated_fsm['states']:
             current_agent = state['agent_id']
             listeners = state.get('listener', [])
             
             for listener_id in listeners:
-                if listener_id != current_agent:  # 避免自连接
+                if listener_id != current_agent:  # Avoid self-connections
                     G.add_edge(current_agent, listener_id,
                              edge_type='listening',
                              state_context=state['state_id'])
         
-        # 随机添加额外的通信连接
+        # Randomly add extra communication connections
         agent_ids = [agent['agent_id'] for agent in self.generated_agents]
         num_additional_edges = random.randint(1, len(agent_ids))
         
@@ -230,7 +214,7 @@ class FSMMultiAgentSystemGenerator:
             agent1 = random.choice(agent_ids)
             agent2 = random.choice(agent_ids)
             
-            # 避免自环和重复边
+            # Avoid self-loops and duplicate edges
             if agent1 != agent2 and not G.has_edge(agent1, agent2):
                 G.add_edge(agent1, agent2,
                           edge_type='sampled_communication',
@@ -240,26 +224,26 @@ class FSMMultiAgentSystemGenerator:
     
     def _initialize_neural_learners(self):
         """
-        初始化TGN神经学习器（使用嵌入维度）
+        Initialize TGN neural learners using the embedding dimension.
         
-        参考GDesigner，使用Sentence Transformer的嵌入维度作为节点特征维度
+        Following GDesigner, use the Sentence Transformer embedding dimension as the node feature dimension.
         """
-        # 状态转移学习器
+        # State transition learner
         num_states = len(self.generated_fsm['states'])
-        print(f"🧠 初始化状态转移TGN (特征维度={self.embedding_dim})...")
+        print(f"🧠 Initializing state transition TGN (feature_dim={self.embedding_dim})...")
         self.neural_state_learner = NeuralTemporalGraph(
-            agent_feature_dim=self.embedding_dim,  # 使用嵌入维度
+            agent_feature_dim=self.embedding_dim,  # Use the embedding dimension
             memory_dimension=self.memory_dimension,
             temporal_dimension=self.temporal_dimension,
             agent_count=num_states,
             network_layers=2
         )
         
-        # 智能体通信学习器
+        # Agent communication learner
         num_agents = len(self.generated_agents)
-        print(f"🧠 初始化智能体通信TGN (特征维度={self.embedding_dim})...")
+        print(f"🧠 Initializing agent communication TGN (feature_dim={self.embedding_dim})...")
         self.neural_communication_learner = NeuralTemporalGraph(
-            agent_feature_dim=self.embedding_dim,  # 使用嵌入维度
+            agent_feature_dim=self.embedding_dim,  # Use the embedding dimension
             memory_dimension=self.memory_dimension,
             temporal_dimension=self.temporal_dimension,
             agent_count=num_agents,
@@ -270,30 +254,30 @@ class FSMMultiAgentSystemGenerator:
                                 training_episodes: int = 100,
                                 learning_rate: float = 0.001) -> Dict[str, Any]:
         """
-        计算辅助的MSE重构损失（用于与策略梯度组合）
+        Compute auxiliary MSE reconstruction loss for combination with policy gradients.
         
-        ⚠️ 注意：这个方法仅计算MSE重构损失，不执行参数更新
-        - MSE损失作为辅助正则化项，帮助TGN学习稳定的节点表示
-        - 实际的参数更新在train_neural_mas.py中通过组合损失完成
-        - 组合损失 = α * 策略梯度 + β * MSE重构
+        ⚠️ Note: this method only computes MSE reconstruction loss and does not update parameters.
+        - MSE loss acts as an auxiliary regularization term to help TGN learn stable node representations
+        - Actual parameter updates are performed in train_neural_mas.py through the combined loss
+        - Combined loss = α * policy gradient + β * MSE reconstruction
         
         Args:
-            training_episodes: 训练轮数（当前仅计算单次损失）
-            learning_rate: 学习率（未使用，仅为兼容性保留）
+            training_episodes: Number of training episodes (currently only a single loss is computed)
+            learning_rate: Learning rate (unused, kept only for compatibility)
             
         Returns:
-            包含MSE损失值和拓扑结构的字典
+            A dictionary containing MSE loss values and topology structures
         """
         if not self.use_neural_learning:
             raise ValueError("Neural learning is not enabled")
         
-        print(f"🎯 计算辅助MSE重构损失（用于组合损失）...")
+        print(f"🎯 Computing auxiliary MSE reconstruction loss (for the combined loss)...")
         
-        # 准备特征
+        # Prepare features
         state_features = self._prepare_state_features()
         agent_features = self._prepare_agent_features()
         
-        # 计算重构损失（不执行参数更新）
+        # Compute reconstruction loss (without updating parameters)
         state_reconstruction_loss = self._train_state_transitions(
             state_features, None, 0
         )
@@ -301,14 +285,14 @@ class FSMMultiAgentSystemGenerator:
             agent_features, None, 0
         )
         
-        # 生成优化后的拓扑结构
+        # Generate optimized topology structures
         optimized_state_topology = self._generate_optimized_state_topology()
         optimized_communication_topology = self._generate_optimized_communication_topology()
         
         learning_results = {
             "training_episodes": 1,
-            "final_state_loss": state_reconstruction_loss,  # MSE辅助损失
-            "final_communication_loss": communication_reconstruction_loss,  # MSE辅助损失
+            "final_state_loss": state_reconstruction_loss,  # Auxiliary MSE loss
+            "final_communication_loss": communication_reconstruction_loss,  # Auxiliary MSE loss
             "state_loss_history": [state_reconstruction_loss],
             "communication_loss_history": [communication_reconstruction_loss],
             "optimized_state_topology": optimized_state_topology,
@@ -316,57 +300,57 @@ class FSMMultiAgentSystemGenerator:
             "optimization_method": "combined_policy_gradient_and_reconstruction"
         }
         
-        print(f"✅ MSE辅助损失计算完成: State={state_reconstruction_loss:.4f}, Comm={communication_reconstruction_loss:.4f}")
+        print(f"✅ Auxiliary MSE loss computation finished: State={state_reconstruction_loss:.4f}, Comm={communication_reconstruction_loss:.4f}")
         return learning_results
     
     def _prepare_state_features(self) -> torch.Tensor:
         """
-        准备状态特征（参考GDesigner的construct_features）
+        Prepare state features (following GDesigner's construct_features).
         
-        使用Sentence Transformer将状态描述嵌入为向量
+        Use Sentence Transformer to embed state descriptions as vectors.
         """
         if self.generated_fsm is None:
             raise ValueError("FSM not generated yet")
         
-        # 使用嵌入模型将状态描述转换为向量
+        # Convert state descriptions into vectors with the embedding model
         state_embeddings = self.embedding_model.encode_states(self.generated_fsm['states'])
         
-        print(f"📊 状态特征准备完成: {state_embeddings.shape}")
+        print(f"📊 State feature preparation completed: {state_embeddings.shape}")
         return state_embeddings
     
     def _prepare_agent_features(self) -> torch.Tensor:
         """
-        准备智能体特征（参考GDesigner的construct_features）
+        Prepare agent features (following GDesigner's construct_features).
         
-        使用Sentence Transformer将智能体描述嵌入为向量
+        Use Sentence Transformer to embed agent descriptions as vectors.
         """
         if self.generated_agents is None:
             raise ValueError("Agents not generated yet")
         
-        # 使用嵌入模型将智能体描述转换为向量
+        # Convert agent descriptions into vectors with the embedding model
         agent_embeddings = self.embedding_model.encode_agents(self.generated_agents)
         
-        print(f"📊 智能体特征准备完成: {agent_embeddings.shape}")
+        print(f"📊 Agent feature preparation completed: {agent_embeddings.shape}")
         return agent_embeddings
     
     def _prepare_features_with_query(self, 
                                      node_features: torch.Tensor,
                                      query: str) -> torch.Tensor:
         """
-        将节点特征与查询嵌入结合（参考GDesigner的construct_new_features）
+        Combine node features with query embeddings (following GDesigner's construct_new_features).
         
         Args:
-            node_features: 节点特征 [num_nodes, feature_dim]
-            query: 任务查询文本
+            node_features: Node features [num_nodes, feature_dim]
+            query: Task query text
             
         Returns:
-            组合特征 [num_nodes, feature_dim + embedding_dim]
+            Combined features [num_nodes, feature_dim + embedding_dim]
         """
         combined_features = self.embedding_model.combine_features_with_query(
             node_features, query
         )
         
-        print(f"📊 查询特征结合完成: {combined_features.shape}")
+        print(f"📊 Query feature combination completed: {combined_features.shape}")
         return combined_features
     
     def compute_auxiliary_reconstruction_loss(self, 
@@ -375,26 +359,26 @@ class FSMMultiAgentSystemGenerator:
                                             timestamps: torch.Tensor,
                                             learner_network: torch.nn.Module) -> float:
         """
-        计算辅助的MSE重构损失
+        Compute auxiliary MSE reconstruction loss.
         
-        这个损失函数作为正则化项，帮助TGN学习稳定且有意义的节点表示
-        与策略梯度损失组合使用，可以提高训练稳定性
+        This loss acts as a regularization term to help TGN learn stable and meaningful node representations.
+        When combined with policy gradient loss, it can improve training stability.
         
         Args:
-            node_features: 节点特征
-            edge_index: 边索引
-            timestamps: 时间戳
-            learner_network: TGN网络
+            node_features: Node features
+            edge_index: Edge indices
+            timestamps: Timestamps
+            learner_network: TGN network
             
         Returns:
-            重构损失值
+            Reconstruction loss value
         """
-        # 前向传播
+        # Forward pass
         evolved_features = learner_network(
             node_features, edge_index, timestamps=timestamps
         )
         
-        # 计算重构损失
+        # Compute reconstruction loss
         reconstruction_loss = torch.nn.functional.mse_loss(evolved_features, node_features)
         
         return reconstruction_loss.item()
@@ -404,10 +388,10 @@ class FSMMultiAgentSystemGenerator:
                                optimizer: torch.optim.Optimizer,
                                episode: int) -> float:
         """
-        【辅助方法】计算状态转移的MSE重构损失
+        [Auxiliary method] Compute MSE reconstruction loss for state transitions.
         
-        注意：此方法仅计算损失值，不执行参数更新
-        实际的参数更新由train_neural_mas.py中的组合损失完成
+        Note: this method only computes the loss value and does not update parameters.
+        Actual parameter updates are performed through the combined loss in train_neural_mas.py.
         """
         edge_index = self._build_state_edge_index()
         timestamps = torch.tensor([episode] * len(self.generated_fsm['states']), dtype=torch.float)
@@ -421,10 +405,10 @@ class FSMMultiAgentSystemGenerator:
                                  optimizer: torch.optim.Optimizer,
                                  episode: int) -> float:
         """
-        【辅助方法】计算通信路径的MSE重构损失
+        [Auxiliary method] Compute MSE reconstruction loss for communication paths.
         
-        注意：此方法仅计算损失值，不执行参数更新
-        实际的参数更新由train_neural_mas.py中的组合损失完成
+        Note: this method only computes the loss value and does not update parameters.
+        Actual parameter updates are performed through the combined loss in train_neural_mas.py.
         """
         edge_index = self._build_communication_edge_index()
         timestamps = torch.tensor([episode] * len(self.generated_agents), dtype=torch.float)
@@ -434,7 +418,7 @@ class FSMMultiAgentSystemGenerator:
         )
     
     def _build_state_edge_index(self) -> torch.Tensor:
-        """构建状态转移的边索引"""
+        """Build edge indices for state transitions."""
         edges = []
         state_id_to_idx = {state['state_id']: i for i, state in enumerate(self.generated_fsm['states'])}
         
@@ -444,13 +428,13 @@ class FSMMultiAgentSystemGenerator:
             edges.append([from_idx, to_idx])
         
         if not edges:
-            # 如果没有边，创建一个自环
+            # If there are no edges, create a self-loop
             edges = [[0, 0]]
         
         return torch.tensor(edges).t().contiguous()
     
     def _build_communication_edge_index(self) -> torch.Tensor:
-        """构建通信的边索引"""
+        """Build edge indices for communication."""
         edges = []
         agent_id_to_idx = {agent['agent_id']: i for i, agent in enumerate(self.generated_agents)}
         
@@ -458,28 +442,28 @@ class FSMMultiAgentSystemGenerator:
             from_idx = agent_id_to_idx[edge[0]]
             to_idx = agent_id_to_idx[edge[1]]
             edges.append([from_idx, to_idx])
-            edges.append([to_idx, from_idx])  # 无向图，添加反向边
+            edges.append([to_idx, from_idx])  # Undirected graph, add reverse edge
         
         if not edges:
-            # 如果没有边，创建一个自环
+            # If there are no edges, create a self-loop
             edges = [[0, 0]]
         
         return torch.tensor(edges).t().contiguous()
     
     def _generate_optimized_state_topology(self) -> Dict[str, Any]:
-        """生成优化后的状态拓扑"""
-        # 使用TGN学习到的连接概率
+        """Generate optimized state topology."""
+        # Use connection probabilities learned by TGN
         with torch.no_grad():
             state_features = self._prepare_state_features()
             communication_probs = self.neural_state_learner.compute_communication_probabilities(state_features)
         
-        # 基于概率构建优化拓扑
+        # Build optimized topology based on probabilities
         optimized_edges = []
         state_ids = [state['state_id'] for state in self.generated_fsm['states']]
         
         for i, from_state in enumerate(state_ids):
             for j, to_state in enumerate(state_ids):
-                if i != j and communication_probs[i, j] > 0.5:  # 阈值过滤
+                if i != j and communication_probs[i, j] > 0.5:  # Threshold filtering
                     optimized_edges.append({
                         "from_state": from_state,
                         "to_state": to_state,
@@ -490,19 +474,19 @@ class FSMMultiAgentSystemGenerator:
         return {"edges": optimized_edges, "type": "optimized_state_transitions"}
     
     def _generate_optimized_communication_topology(self) -> Dict[str, Any]:
-        """生成优化后的通信拓扑"""
-        # 使用TGN学习到的连接概率
+        """Generate optimized communication topology."""
+        # Use connection probabilities learned by TGN
         with torch.no_grad():
             agent_features = self._prepare_agent_features()
             communication_probs = self.neural_communication_learner.compute_communication_probabilities(agent_features)
         
-        # 基于概率构建优化拓扑
+        # Build optimized topology based on probabilities
         optimized_edges = []
         agent_ids = [agent['agent_id'] for agent in self.generated_agents]
         
         for i, from_agent in enumerate(agent_ids):
             for j, to_agent in enumerate(agent_ids):
-                if i != j and communication_probs[i, j] > 0.5:  # 阈值过滤
+                if i != j and communication_probs[i, j] > 0.5:  # Threshold filtering
                     optimized_edges.append({
                         "from_agent": from_agent,
                         "to_agent": to_agent,
@@ -513,7 +497,7 @@ class FSMMultiAgentSystemGenerator:
         return {"edges": optimized_edges, "type": "optimized_communication"}
     
     def _graph_to_dict(self, graph: nx.Graph) -> Dict[str, Any]:
-        """将NetworkX图转换为字典格式"""
+        """Convert a NetworkX graph into dictionary format."""
         return {
             "nodes": list(graph.nodes(data=True)),
             "edges": list(graph.edges(data=True)),
@@ -521,7 +505,7 @@ class FSMMultiAgentSystemGenerator:
         }
     
     def save_fsm_mas_system(self, output_path: str):
-        """保存完整的FSM-MAS系统"""
+        """Save the complete FSM-MAS system."""
         if not all([self.generated_agents, self.generated_fsm, 
                    self.state_topology_graph, self.listening_topology_graph]):
             raise ValueError("FSM-MAS system not fully generated")
@@ -537,54 +521,54 @@ class FSMMultiAgentSystemGenerator:
         with open(output_path, 'w', encoding='utf-8') as f:
             json.dump(system_data, f, indent=2, ensure_ascii=False)
         
-        print(f"💾 FSM-MAS系统已保存到 {output_path}")
+        print(f"💾 FSM-MAS system saved to {output_path}")
     
     def create_executable_system(self) -> MultiAgentSystem:
         """
-        创建可执行的多智能体系统
+        Create an executable multi-agent system.
         
-        将生成和优化后的FSM-MAS转换为可执行的MultiAgentSystem
+        Convert the generated and optimized FSM-MAS into an executable MultiAgentSystem.
         
         Returns:
-            MultiAgentSystem: 可执行的多智能体系统
+            MultiAgentSystem: Executable multi-agent system
         """
         if not all([self.generated_agents, self.generated_fsm]):
             raise ValueError("FSM-MAS system not fully generated. Please call generate_complete_fsm_mas first.")
         
-        print("🔧 创建可执行的多智能体系统...")
+        print("🔧 Creating executable multi-agent system...")
         
-        # 创建MultiAgentSystem实例
+        # Create a MultiAgentSystem instance
         executable_system = MultiAgentSystem(
             agents_json=self.generated_agents,
             states_json=self.generated_fsm
         )
         
-        print("✅ 可执行系统创建完成")
+        print("✅ Executable system created")
         return executable_system
     
     def execute_task(self, task_input: str, max_transitions: int = 10) -> Tuple[str, float]:
         """
-        执行任务
+        Execute a task.
         
         Args:
-            task_input: 任务输入
-            max_transitions: 最大状态转移次数
+            task_input: Task input
+            max_transitions: Maximum number of state transitions
             
         Returns:
-            Tuple[str, float]: (执行结果, 总成本)
+            Tuple[str, float]: (execution result, total cost)
         """
         if not all([self.generated_agents, self.generated_fsm]):
             raise ValueError("FSM-MAS system not fully generated. Please call generate_complete_fsm_mas first.")
         
-        print(f"🚀 开始执行任务: {task_input}")
+        print(f"🚀 Starting task execution: {task_input}")
         
-        # 创建可执行系统
+        # Create executable system
         executable_system = self.create_executable_system()
         
-        # 执行任务
+        # Execute task
         result, cost = executable_system.start(task_input, max_transitions)
         
-        print(f"✅ 任务执行完成，成本: {cost}")
+        print(f"✅ Task execution completed, cost: {cost}")
         return result, cost
     
     def generate_learn_and_execute(self, 
@@ -594,30 +578,30 @@ class FSMMultiAgentSystemGenerator:
                                  training_episodes: int = 50,
                                  max_transitions: int = 10) -> Dict[str, Any]:
         """
-        完整的生成-学习-执行流程
+        Full generate-learn-execute workflow.
         
         Args:
-            task_description: 任务描述（用于生成FSM）
-            task_input: 具体任务输入（用于执行）
-            available_tools: 可用工具
-            training_episodes: TGN训练轮数
-            max_transitions: 执行时最大状态转移次数
+            task_description: Task description (used to generate the FSM)
+            task_input: Concrete task input (used for execution)
+            available_tools: Available tools
+            training_episodes: Number of TGN training episodes
+            max_transitions: Maximum number of state transitions during execution
             
         Returns:
-            完整的结果包含生成、学习和执行的所有信息
+            Complete results containing all generation, learning, and execution information
         """
-        print("🌟 开始完整的生成-学习-执行流程...")
+        print("🌟 Starting the full generate-learn-execute workflow...")
         
-        # Step 1: 生成FSM-MAS系统
+        # Step 1: Generate the FSM-MAS system
         fsm_mas_config = self.generate_complete_fsm_mas(task_description, available_tools)
         
-        # Step 2: TGN学习优化
+        # Step 2: TGN learning optimization
         learning_results = self.learn_optimal_topologies(training_episodes)
         
-        # Step 3: 执行任务
+        # Step 3: Execute the task
         execution_result, execution_cost = self.execute_task(task_input, max_transitions)
         
-        # 构建完整结果
+        # Build the complete result
         complete_results = {
             'task_description': task_description,
             'task_input': task_input,
@@ -628,18 +612,18 @@ class FSMMultiAgentSystemGenerator:
             'workflow': 'generate_learn_execute'
         }
         
-        print("🎉 完整流程执行完成！")
+        print("🎉 Full workflow completed!")
         return complete_results
     
     def load_fsm_mas_system(self, input_path: str):
-        """加载FSM-MAS系统"""
+        """Load an FSM-MAS system."""
         with open(input_path, 'r', encoding='utf-8') as f:
             system_data = json.load(f)
         
         self.generated_agents = system_data['agents']
         self.generated_fsm = system_data['fsm']
         
-        # 重建图结构
+        # Rebuild graph structures
         self.state_topology_graph = nx.DiGraph()
         state_topo = system_data['state_topology']
         self.state_topology_graph.add_nodes_from(state_topo['nodes'])
@@ -655,14 +639,14 @@ class FSMMultiAgentSystemGenerator:
         if self.use_neural_learning:
             self._initialize_neural_learners()
         
-        print(f"📂 FSM-MAS系统已从 {input_path} 加载")
+        print(f"📂 FSM-MAS system loaded from {input_path}")
 
 
-# 便捷函数
+# Convenience functions
 def create_fsm_mas_generator(use_neural_learning: bool = True,
                            memory_dimension: int = 128,
                            temporal_dimension: int = 32) -> FSMMultiAgentSystemGenerator:
-    """创建FSM-MAS生成器"""
+    """Create an FSM-MAS generator."""
     return FSMMultiAgentSystemGenerator(
         use_neural_learning=use_neural_learning,
         memory_dimension=memory_dimension,
@@ -674,24 +658,24 @@ def generate_and_learn_fsm_mas(task_description: str,
                              available_tools: List[str] = None,
                              training_episodes: int = 100,
                              output_path: str = None) -> Dict[str, Any]:
-    """一键生成并学习FSM-MAS系统"""
+    """Generate and learn an FSM-MAS system in one call."""
     
-    # 创建生成器
+    # Create generator
     generator = create_fsm_mas_generator()
     
-    # 生成完整系统
+    # Generate the complete system
     fsm_mas_config = generator.generate_complete_fsm_mas(task_description, available_tools)
     
-    # 学习最优拓扑
+    # Learn optimal topologies
     learning_results = generator.learn_optimal_topologies(training_episodes)
     
-    # 合并结果
+    # Merge results
     complete_results = {
         **fsm_mas_config,
         "learning_results": learning_results
     }
     
-    # 保存结果
+    # Save results
     if output_path:
         generator.save_fsm_mas_system(output_path)
     
@@ -704,12 +688,12 @@ def generate_learn_and_execute_fsm_mas(task_description: str,
                                      training_episodes: int = 50,
                                      max_transitions: int = 10,
                                      output_path: str = None) -> Dict[str, Any]:
-    """一键生成、学习并执行FSM-MAS系统"""
+    """Generate, learn, and execute an FSM-MAS system in one call."""
     
-    # 创建生成器
+    # Create generator
     generator = create_fsm_mas_generator()
     
-    # 执行完整流程
+    # Execute the full workflow
     complete_results = generator.generate_learn_and_execute(
         task_description=task_description,
         task_input=task_input,
@@ -718,14 +702,14 @@ def generate_learn_and_execute_fsm_mas(task_description: str,
         max_transitions=max_transitions
     )
     
-    # 保存结果
+    # Save results
     if output_path:
         generator.save_fsm_mas_system(output_path)
     
     return complete_results
 
 
-# 导出主要类和函数
+# Export main classes and functions
 __all__ = [
     'FSMMultiAgentSystemGenerator',
     'create_fsm_mas_generator',
