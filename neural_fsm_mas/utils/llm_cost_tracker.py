@@ -1,12 +1,12 @@
 """
 LLM API Cost Tracker
-LLM API成本追踪器
+LLM API cost tracker
 
-功能:
-1. 维护各种LLM模型的API价格清单
-2. 追踪每次LLM调用的token使用和成本
-3. 计算episode/batch的总成本
-4. 支持成本损失函数计算
+Features:
+1. Maintain the API pricing table for various LLM models
+2. Track token usage and cost for each LLM call
+3. Compute total cost per episode/batch
+4. Support cost loss computation
 """
 
 from typing import Dict, List, Optional, Tuple
@@ -17,14 +17,14 @@ from pathlib import Path
 
 @dataclass
 class LLMPricing:
-    """LLM模型定价信息"""
+    """LLM model pricing information."""
     model_name: str
-    input_price_per_1k: float  # 美元/1K tokens
-    output_price_per_1k: float  # 美元/1K tokens
-    context_window: int = 0  # 上下文窗口大小
+    input_price_per_1k: float  # USD/1K tokens
+    output_price_per_1k: float  # USD/1K tokens
+    context_window: int = 0  # Context window size
     
     def calculate_cost(self, input_tokens: int, output_tokens: int) -> float:
-        """计算单次调用成本（美元）"""
+        """Calculate the cost of a single call in USD."""
         input_cost = (input_tokens / 1000.0) * self.input_price_per_1k
         output_cost = (output_tokens / 1000.0) * self.output_price_per_1k
         return input_cost + output_cost
@@ -32,7 +32,7 @@ class LLMPricing:
 
 @dataclass
 class LLMCall:
-    """单次LLM调用记录"""
+    """Record for a single LLM call."""
     model_name: str
     input_tokens: int
     output_tokens: int
@@ -43,9 +43,9 @@ class LLMCall:
 
 
 class LLMPricingRegistry:
-    """LLM定价注册表"""
+    """LLM pricing registry."""
     
-    # 官方/公开定价清单（会随时间变化；以代码仓库当前版本为准）
+    # Official/public pricing table (subject to change over time; the current repository version is authoritative)
     PRICING_TABLE = {
         # OpenAI Models
         'gpt-4o': LLMPricing(
@@ -154,28 +154,28 @@ class LLMPricingRegistry:
     
     @classmethod
     def get_pricing(cls, model_name: str) -> LLMPricing:
-        """获取模型定价信息"""
-        # 尝试精确匹配
+        """Get pricing information for a model."""
+        # Try exact matching
         if model_name in cls.PRICING_TABLE:
             return cls.PRICING_TABLE[model_name]
         
-        # 尝试模糊匹配（例如 gpt-4o-mini-2024-07-18 匹配 gpt-4o-mini）
+        # Try fuzzy matching (for example, gpt-4o-mini-2024-07-18 matches gpt-4o-mini)
         for key in cls.PRICING_TABLE.keys():
             if key in model_name:
                 return cls.PRICING_TABLE[key]
         
-        # 默认使用gpt-5-nano定价
+        # Use gpt-5-nano pricing by default
         print(f"⚠️  Warning: Model '{model_name}' not found in pricing table, using gpt-5-nano as default")
         return cls.PRICING_TABLE['gpt-5-nano']
     
     @classmethod
     def list_all_models(cls) -> List[str]:
-        """列出所有支持的模型"""
+        """List all supported models."""
         return list(cls.PRICING_TABLE.keys())
     
     @classmethod
     def print_pricing_table(cls):
-        """打印定价表"""
+        """Print the pricing table."""
         print("\n" + "=" * 100)
         print("LLM API Pricing Table (USD per 1K tokens)")
         print("=" * 100)
@@ -189,18 +189,18 @@ class LLMPricingRegistry:
 
 
 class LLMCostTracker:
-    """LLM成本追踪器"""
+    """LLM cost tracker."""
     
     def __init__(self, default_model: str = 'gpt-5-nano'):
         """
-        初始化成本追踪器
+        Initialize the cost tracker.
         
         Args:
-            default_model: 默认模型名称
+            default_model: Default model name
         """
         self.default_model = default_model
         self.call_history: List[LLMCall] = []
-        self.episode_costs: List[float] = []  # 每个episode的成本
+        self.episode_costs: List[float] = []  # Cost for each episode
         
     def track_call(self, 
                    input_tokens: int, 
@@ -210,24 +210,24 @@ class LLMCostTracker:
                    state_id: Optional[str] = None,
                    timestamp: Optional[float] = None) -> float:
         """
-        追踪一次LLM调用
+        Track one LLM call.
         
         Args:
-            input_tokens: 输入token数
-            output_tokens: 输出token数
-            model_name: 模型名称（可选，默认使用default_model）
-            agent_id: Agent ID（可选）
-            state_id: State ID（可选）
-            timestamp: 时间戳（可选）
+            input_tokens: Number of input tokens
+            output_tokens: Number of output tokens
+            model_name: Model name (optional; uses default_model by default)
+            agent_id: Agent ID (optional)
+            state_id: State ID (optional)
+            timestamp: Timestamp (optional)
         
         Returns:
-            本次调用的成本（美元）
+            Cost of this call in USD
         """
         model_name = model_name or self.default_model
         pricing = LLMPricingRegistry.get_pricing(model_name)
         cost = pricing.calculate_cost(input_tokens, output_tokens)
         
-        # 记录调用
+        # Record the call
         call = LLMCall(
             model_name=model_name,
             input_tokens=input_tokens,
@@ -242,15 +242,15 @@ class LLMCostTracker:
         return cost
     
     def start_episode(self):
-        """开始一个新的episode"""
+        """Start a new episode."""
         self.episode_start_idx = len(self.call_history)
     
     def end_episode(self) -> float:
         """
-        结束当前episode并计算成本
+        End the current episode and compute its cost.
         
         Returns:
-            本episode的总成本（美元）
+            Total cost of the current episode in USD
         """
         episode_calls = self.call_history[self.episode_start_idx:]
         episode_cost = sum(call.cost_usd for call in episode_calls)
@@ -258,17 +258,17 @@ class LLMCostTracker:
         return episode_cost
     
     def get_total_cost(self) -> float:
-        """获取总成本（美元）"""
+        """Get the total cost in USD."""
         return sum(call.cost_usd for call in self.call_history)
     
     def get_average_cost_per_episode(self) -> float:
-        """获取每个episode的平均成本（美元）"""
+        """Get the average cost per episode in USD."""
         if not self.episode_costs:
             return 0.0
         return sum(self.episode_costs) / len(self.episode_costs)
     
     def get_cost_by_agent(self) -> Dict[str, float]:
-        """按Agent统计成本"""
+        """Get cost statistics by agent."""
         agent_costs = {}
         for call in self.call_history:
             if call.agent_id:
@@ -276,7 +276,7 @@ class LLMCostTracker:
         return agent_costs
     
     def get_cost_by_state(self) -> Dict[str, float]:
-        """按State统计成本"""
+        """Get cost statistics by state."""
         state_costs = {}
         for call in self.call_history:
             if call.state_id:
@@ -284,7 +284,7 @@ class LLMCostTracker:
         return state_costs
     
     def get_statistics(self) -> Dict[str, any]:
-        """获取统计信息"""
+        """Get summary statistics."""
         return {
             'total_calls': len(self.call_history),
             'total_cost_usd': self.get_total_cost(),
@@ -297,7 +297,7 @@ class LLMCostTracker:
         }
     
     def print_statistics(self):
-        """打印统计信息"""
+        """Print summary statistics."""
         stats = self.get_statistics()
         
         print("\n" + "=" * 80)
@@ -323,7 +323,7 @@ class LLMCostTracker:
         print("=" * 80 + "\n")
     
     def save_to_file(self, filepath: str):
-        """保存追踪数据到文件"""
+        """Save tracking data to a file."""
         data = {
             'default_model': self.default_model,
             'statistics': self.get_statistics(),
@@ -345,7 +345,7 @@ class LLMCostTracker:
             json.dump(data, f, indent=2, ensure_ascii=False)
     
     def load_from_file(self, filepath: str):
-        """从文件加载追踪数据"""
+        """Load tracking data from a file."""
         with open(filepath, 'r', encoding='utf-8') as f:
             data = json.load(f)
         
@@ -355,54 +355,54 @@ class LLMCostTracker:
             for call_data in data['call_history']
         ]
         
-        # 重建episode_costs（简化版）
+        # Rebuild episode_costs (simplified version)
         self.episode_costs = []
 
 
-# ========== 便捷函数 ==========
+# ========== Convenience Functions ==========
 
 def create_cost_tracker(model_name: str = 'gpt-5-nano') -> LLMCostTracker:
-    """创建成本追踪器"""
+    """Create a cost tracker."""
     return LLMCostTracker(default_model=model_name)
 
 
-# ========== 全局追踪器（供LLM客户端直接写入） ==========
+# ========== Global Tracker (for direct writes from LLM clients) ==========
 
 _GLOBAL_COST_TRACKER: Optional[LLMCostTracker] = None
 
 
 def set_global_cost_tracker(tracker: Optional[LLMCostTracker]):
-    """设置全局LLM成本追踪器（例如由集成模块在训练初始化时注入）"""
+    """Set the global LLM cost tracker (for example, injected by the integration module during training initialization)."""
     global _GLOBAL_COST_TRACKER
     _GLOBAL_COST_TRACKER = tracker
 
 
 def get_global_cost_tracker() -> Optional[LLMCostTracker]:
-    """获取全局LLM成本追踪器"""
+    """Get the global LLM cost tracker."""
     return _GLOBAL_COST_TRACKER
 
 
 def print_pricing_table():
-    """打印LLM定价表"""
+    """Print the LLM pricing table."""
     LLMPricingRegistry.print_pricing_table()
 
 
 def estimate_cost(input_tokens: int, output_tokens: int, model_name: str = 'gpt-5-nano') -> float:
-    """估算成本"""
+    """Estimate cost."""
     pricing = LLMPricingRegistry.get_pricing(model_name)
     return pricing.calculate_cost(input_tokens, output_tokens)
 
 
-# ========== 测试示例 ==========
+# ========== Test Example ==========
 
 if __name__ == "__main__":
-    # 打印定价表
+    # Print the pricing table
     print_pricing_table()
     
-    # 创建追踪器
+    # Create a tracker
     tracker = create_cost_tracker('gpt-4o-mini')
     
-    # 模拟一些调用
+    # Simulate several calls
     print("Simulating LLM calls...")
     tracker.start_episode()
     tracker.track_call(input_tokens=500, output_tokens=150, agent_id="0", state_id="0")
@@ -417,10 +417,10 @@ if __name__ == "__main__":
     episode_cost_2 = tracker.end_episode()
     print(f"Episode 2 cost: ${episode_cost_2:.6f}")
     
-    # 打印统计
+    # Print statistics
     tracker.print_statistics()
     
-    # 成本估算示例
+    # Cost estimation example
     print("\n" + "=" * 80)
     print("Cost Estimation Examples:")
     print("=" * 80)
@@ -428,4 +428,3 @@ if __name__ == "__main__":
     print(f"gpt-4o      (1000 input + 500 output):  ${estimate_cost(1000, 500, 'gpt-4o'):.6f}")
     print(f"gpt-4-turbo (1000 input + 500 output):  ${estimate_cost(1000, 500, 'gpt-4-turbo'):.6f}")
     print("=" * 80 + "\n")
-
