@@ -1,11 +1,3 @@
-"""
-Multi-Agent Topology Management System
-多智能体拓扑管理系统
-
-适配自原始Graph实现，专门为MetaAgent项目优化
-支持动态智能体通信拓扑和状态转移学习
-"""
-
 import shortuuid
 from typing import Any, List, Optional, Dict, Tuple
 from abc import ABC
@@ -16,7 +8,7 @@ import sys
 import os
 from pathlib import Path
 
-# 添加MetaAgent路径
+# Translated comment
 sys.path.append(str(Path(__file__).parent.parent.parent))
 sys.path.append(str(Path(__file__).parent.parent))
 
@@ -31,17 +23,7 @@ from torch_geometric.utils import dense_to_sparse
 
 
 class MultiAgentTopologyManager(ABC):
-    """
-    多智能体拓扑管理器
-    
-    核心功能：
-    1. 管理智能体网络的拓扑结构
-    2. 学习最优的智能体通信模式
-    3. 支持动态状态转移规则学习
-    4. 集成时间敏感的记忆管理
-    
-    这个类是MetaAgent项目中智能体协作的核心组件
-    """
+    """Translated class documentation."""
 
     def __init__(self, 
                 task_domain: str,
@@ -60,7 +42,7 @@ class MultiAgentTopologyManager(ABC):
                 temporal_encoding_dimension: int = 32,
                 ):
         
-        # 处理默认连接掩码
+                # Translated comment
         if fixed_spatial_connection_masks is None:
             fixed_spatial_connection_masks = [
                 [1 if i != j else 0 for j in range(len(agent_role_names))] 
@@ -72,18 +54,18 @@ class MultiAgentTopologyManager(ABC):
                 for i in range(len(agent_role_names))
             ]
         
-        # 转换为张量格式
+                # Translated comment
         fixed_spatial_connection_masks = torch.tensor(fixed_spatial_connection_masks).view(-1)
         fixed_temporal_connection_masks = torch.tensor(fixed_temporal_connection_masks).view(-1)
         
-        # 验证掩码维度
+                # Translated comment
         expected_mask_size = len(agent_role_names) * len(agent_role_names)
-        assert len(fixed_spatial_connection_masks) == expected_mask_size, \
+        assert len(fixed_spatial_connection_masks) == expected_mask_size,\
             f"Spatial connection masks size mismatch: expected {expected_mask_size}, got {len(fixed_spatial_connection_masks)}"
-        assert len(fixed_temporal_connection_masks) == expected_mask_size, \
+        assert len(fixed_temporal_connection_masks) == expected_mask_size,\
             f"Temporal connection masks size mismatch: expected {expected_mask_size}, got {len(fixed_temporal_connection_masks)}"
         
-        # 初始化基本属性
+                # Translated comment
         self.topology_id: str = shortuuid.ShortUUID().random(length=6)
         self.task_domain: str = task_domain
         self.language_model_name: str = language_model_name
@@ -95,7 +77,7 @@ class MultiAgentTopologyManager(ABC):
         self.temporal_encoding_dimension = temporal_encoding_dimension
         self.current_interaction_round = 0
         
-        # 智能体和决策相关
+                # Translated comment
         self.decision_executor: AgentExecutionNode = ReasoningAgentFactory.create_agent(
             decision_strategy, 
             domain=self.task_domain, 
@@ -103,26 +85,26 @@ class MultiAgentTopologyManager(ABC):
         )
         self.agent_execution_nodes: Dict[str, AgentExecutionNode] = {}
         
-        # FSM状态管理器（新增）
+                # Translated comment
         self.fsm_state_manager: Optional[FSMStateManager] = None
-        self.use_fsm_mode: bool = False  # 默认兼容旧模式
+        self.use_fsm_mode: bool = False          # Translated comment
         self.potential_spatial_connections: List[List[str, str]] = []
         self.potential_temporal_connections: List[List[str, str]] = []
         self.agent_configuration_params = agent_configuration_params if agent_configuration_params is not None else [{} for _ in agent_role_names]
         
-        # 初始化智能体网络
+                # Translated comment
         self._initialize_agent_nodes()
         self._initialize_potential_connections()
         
-        # 初始化提示管理和特征
+                # Translated comment
         self.domain_prompt_manager = DomainPromptManager.get_manager(task_domain)
         self.role_adjacency_matrix = self._construct_role_adjacency_matrix()
         self.agent_features = self._construct_agent_features()
         
-        # 初始化神经网络组件
+                # Translated comment
         self._initialize_neural_networks()
         
-        # 初始化连接参数
+                # Translated comment
         self._initialize_connection_parameters(
             initial_spatial_connection_prob, 
             fixed_spatial_connection_masks,
@@ -131,10 +113,10 @@ class MultiAgentTopologyManager(ABC):
         )
     
     def _initialize_agent_nodes(self):
-        """初始化智能体执行节点"""
+        """Translated function documentation."""
         for i, agent_role in enumerate(self.agent_role_names):
             agent_config = self.agent_configuration_params[i]
-            # 使用具体实现类而不是抽象基类，避免抽象方法实例化错误
+                        # Translated comment
             agent_node = ConcreteAgentExecutionNode(
                 node_id=f"agent_{i}",
                 agent_role=agent_role,
@@ -142,33 +124,33 @@ class MultiAgentTopologyManager(ABC):
                 llm_name=self.language_model_name,
                 **agent_config
             )
-            # ✨ 标记为FSM模式，用于成本优化（跳过冗余的spatial/temporal context）
+                        # Translated comment
             agent_node._use_fsm_mode = self.use_fsm_mode
             self.agent_execution_nodes[agent_node.node_id] = agent_node
     
     def _initialize_potential_connections(self):
-        """初始化潜在连接"""
+        """Translated function documentation."""
         agent_ids = list(self.agent_execution_nodes.keys())
         
-        # 空间连接（智能体间通信）
+                # Translated comment
         for source_id in agent_ids:
             for target_id in agent_ids:
                 if source_id != target_id:
                     self.potential_spatial_connections.append([source_id, target_id])
         
-        # 时间连接（跨轮次连接）
+                # Translated comment
         for source_id in agent_ids:
             for target_id in agent_ids:
                 self.potential_temporal_connections.append([source_id, target_id])
     
     def _construct_role_adjacency_matrix(self):
-        """构建角色邻接矩阵"""
+        """Translated function documentation."""
         role_connections: List[Tuple[str, str]] = self.domain_prompt_manager.get_role_connections()
         num_agents = self.num_agents
         role_adjacency = torch.zeros((num_agents, num_agents))
         role_to_indices = {}
         
-        # 建立角色到索引的映射
+                # Translated comment
         for connection in role_connections:
             input_role, output_role = connection
             role_to_indices[input_role] = []
@@ -179,7 +161,7 @@ class MultiAgentTopologyManager(ABC):
             if agent_role in role_to_indices:
                 role_to_indices[agent_role].append(i)
             
-        # 构建邻接矩阵
+                # Translated comment
         for connection in role_connections:
             input_role, output_role = connection
             input_indices = role_to_indices.get(input_role, [])
@@ -189,32 +171,32 @@ class MultiAgentTopologyManager(ABC):
                 for output_idx in output_indices:
                     role_adjacency[input_idx][output_idx] = 1
         
-        # 转换为稀疏格式
+                # Translated comment
         edge_index, edge_weights = dense_to_sparse(role_adjacency)
         return edge_index
     
     def _construct_agent_features(self):
-        """构建智能体特征"""
+        """Translated function documentation."""
         agent_features = []
         for agent_id in self.agent_execution_nodes:
             agent_role = self.agent_execution_nodes[agent_id].agent_role
             role_description = self.domain_prompt_manager.get_role_description(agent_role)
             
-            # 使用嵌入获取特征（这里需要实现嵌入函数）
+                        # Translated comment
             feature_vector = self._get_text_embedding(role_description)
             agent_features.append(feature_vector)
         
         return torch.tensor(np.array(agent_features))
     
     def _get_text_embedding(self, text: str) -> np.ndarray:
-        """获取文本嵌入（简化实现）"""
-        # 这里应该使用实际的嵌入模型，暂时使用随机向量
-        return np.random.randn(384)  # 假设使用384维嵌入
+        """Translated function documentation."""
+                # Translated comment
+        return np.random.randn(384)          # Translated comment
     
     def _initialize_neural_networks(self):
-        """初始化神经网络组件"""
+        """Translated function documentation."""
         if self.use_neural_temporal_graph:
-            # 使用神经时间图网络
+                        # Translated comment
             self.neural_temporal_graph = NeuralTemporalGraph(
                 agent_feature_dim=self.agent_features.size(1),
                 memory_dimension=self.memory_bank_dimension,
@@ -223,18 +205,18 @@ class MultiAgentTopologyManager(ABC):
                 network_layers=2
             )
             
-            # 保持兼容性的图网络
+                        # Translated comment
             self.compatibility_graph_network = CompatibilityGraphNetwork(
                 self.agent_features.size(1) * 2, 16, self.agent_features.size(1)
             )
         else:
-            # 使用传统图网络
+                        # Translated comment
             self.compatibility_graph_network = CompatibilityGraphNetwork(
                 self.agent_features.size(1) * 2, 16, self.agent_features.size(1)
             )
             self.neural_temporal_graph = None
             
-        # 多层感知机解码器
+                # Translated comment
         self.decision_decoder = MultiLayerPerceptron(384, 16, 16)
     
     def _initialize_connection_parameters(self, 
@@ -242,8 +224,8 @@ class MultiAgentTopologyManager(ABC):
                                         fixed_spatial_masks: torch.Tensor,
                                         initial_temporal_prob: float,
                                         fixed_temporal_masks: torch.Tensor):
-        """初始化连接参数"""
-        # 空间连接参数
+        """Translated function documentation."""
+                # Translated comment
         if self.enable_spatial_optimization:
             initial_spatial_logit = torch.log(torch.tensor(initial_spatial_prob / (1 - initial_spatial_prob)))
         else:
@@ -255,7 +237,7 @@ class MultiAgentTopologyManager(ABC):
         )
         self.spatial_connection_masks = torch.nn.Parameter(fixed_spatial_masks, requires_grad=False)
 
-        # 时间连接参数
+                # Translated comment
         if self.enable_temporal_optimization:
             initial_temporal_logit = torch.log(torch.tensor(initial_temporal_prob / (1 - initial_temporal_prob)))
         else:
@@ -268,7 +250,7 @@ class MultiAgentTopologyManager(ABC):
         self.temporal_connection_masks = torch.nn.Parameter(fixed_temporal_masks, requires_grad=False)
     
     def construct_enhanced_agent_features(self, task_query: str):
-        """构建增强的智能体特征（融合任务信息）"""
+        """Translated function documentation."""
         query_embedding = torch.tensor(self._get_text_embedding(task_query))
         query_embedding = query_embedding.unsqueeze(0).repeat((self.num_agents, 1))
         enhanced_features = torch.cat((self.agent_features, query_embedding), dim=1)
@@ -276,7 +258,7 @@ class MultiAgentTopologyManager(ABC):
         
     @property
     def spatial_adjacency_matrix(self):
-        """获取空间邻接矩阵"""
+        """Translated function documentation."""
         matrix = np.zeros((len(self.agent_execution_nodes), len(self.agent_execution_nodes)))
         for i, agent1_id in enumerate(self.agent_execution_nodes):
             for j, agent2_id in enumerate(self.agent_execution_nodes):
@@ -286,7 +268,7 @@ class MultiAgentTopologyManager(ABC):
 
     @property
     def temporal_adjacency_matrix(self):
-        """获取时间邻接矩阵"""
+        """Translated function documentation."""
         matrix = np.zeros((len(self.agent_execution_nodes), len(self.agent_execution_nodes)))
         for i, agent1_id in enumerate(self.agent_execution_nodes):
             for j, agent2_id in enumerate(self.agent_execution_nodes):
@@ -296,12 +278,12 @@ class MultiAgentTopologyManager(ABC):
 
     @property
     def num_agents(self):
-        """获取智能体数量"""
+        """Translated function documentation."""
         return len(self.agent_execution_nodes)
 
     def construct_spatial_connections(self, sampling_temperature: float = 1.0, 
                                     connection_threshold: float = None) -> torch.Tensor:
-        """构建空间连接（智能体通信网络）"""
+        """Translated function documentation."""
         self.clear_spatial_connections()
         connection_log_probs = [torch.tensor(0.0, requires_grad=self.enable_spatial_optimization)]
         
@@ -320,12 +302,12 @@ class MultiAgentTopologyManager(ABC):
                     source_agent.add_successor_connection(target_agent, 'spatial')
                 continue
             
-            # 计算连接概率
+                        # Translated comment
             connection_probability = torch.sigmoid(edge_logit / sampling_temperature)
             if connection_threshold:
                 connection_probability = torch.tensor(1 if connection_probability > connection_threshold else 0)
                 
-            # 采样连接
+                        # Translated comment
             if torch.rand(1) < connection_probability:
                 source_agent.add_successor_connection(target_agent, 'spatial')
                 connection_log_probs.append(torch.log(connection_probability))
@@ -337,7 +319,7 @@ class MultiAgentTopologyManager(ABC):
     def construct_temporal_connections(self, interaction_round: int = 0, 
                                      sampling_temperature: float = 1.0, 
                                      connection_threshold: float = None) -> torch.Tensor:
-        """构建时间连接（跨轮次连接）"""
+        """Translated function documentation."""
         self.clear_temporal_connections()
         connection_log_probs = [torch.tensor(0.0, requires_grad=self.enable_temporal_optimization)]
         
@@ -359,12 +341,12 @@ class MultiAgentTopologyManager(ABC):
                     source_agent.add_successor_connection(target_agent, 'temporal')
                 continue
             
-            # 计算连接概率
+                        # Translated comment
             connection_probability = torch.sigmoid(edge_logit / sampling_temperature)
             if connection_threshold:
                 connection_probability = torch.tensor(1 if connection_probability > connection_threshold else 0)
                 
-            # 采样连接
+                        # Translated comment
             if torch.rand(1) < connection_probability:
                 source_agent.add_successor_connection(target_agent, 'temporal')
                 connection_log_probs.append(torch.log(connection_probability))
@@ -374,21 +356,21 @@ class MultiAgentTopologyManager(ABC):
         return torch.sum(torch.stack(connection_log_probs))
 
     def clear_spatial_connections(self):
-        """清除空间连接"""
+        """Translated function documentation."""
         for agent_node in self.agent_execution_nodes.values():
             agent_node.clear_spatial_connections()
 
     def clear_temporal_connections(self):
-        """清除时间连接"""
+        """Translated function documentation."""
         for agent_node in self.agent_execution_nodes.values():
             agent_node.clear_temporal_connections()
 
     def find_agent_node(self, agent_id: str) -> AgentExecutionNode:
-        """查找智能体节点"""
+        """Translated function documentation."""
         return self.agent_execution_nodes.get(agent_id)
 
     def _check_connection_cycle(self, new_agent: AgentExecutionNode, target_agents: set) -> bool:
-        """检查连接是否会产生循环"""
+        """Translated function documentation."""
         if new_agent in target_agents:
             return True
         for successor in new_agent.spatial_successors:
@@ -401,26 +383,17 @@ class MultiAgentTopologyManager(ABC):
                                           num_interaction_rounds: int = 3, 
                                           max_retry_attempts: int = 3, 
                                           max_execution_time: int = 600) -> List[Any]:
-        """
-        执行多智能体推理过程
-        
-        这是核心的执行方法，整合了神经时间图网络的学习能力
-        
-        Returns:
-            (final_reasoning_results, reasoning_log_probs):
-                - final_reasoning_results: List[Any] - 推理结果
-                - reasoning_log_probs: torch.Tensor - 对数概率(可微分)
-        """
-        # 初始化为tensor以支持梯度传播
+        """Translated function documentation."""
+                # Translated comment
         reasoning_log_probs = torch.tensor(0.0, dtype=torch.float32, requires_grad=True)
         enhanced_features = self.construct_enhanced_agent_features(task_input['task'])
         
         if self.use_neural_temporal_graph and self.neural_temporal_graph is not None:
-            # 使用神经时间图网络进行推理
+                        # Translated comment
             temporal_stamps = torch.tensor([self.current_interaction_round] * len(self.agent_execution_nodes), dtype=torch.float)
             agent_indices = torch.arange(len(self.agent_execution_nodes))
             
-            # 通过神经时间图网络获取智能体嵌入
+                        # Translated comment
             reasoning_logits = self.neural_temporal_graph(
                 enhanced_features, 
                 self.role_adjacency_matrix, 
@@ -428,25 +401,25 @@ class MultiAgentTopologyManager(ABC):
                 agent_indices=agent_indices
             )
         else:
-            # 使用传统图网络
+                        # Translated comment
             reasoning_logits = self.compatibility_graph_network(enhanced_features, self.role_adjacency_matrix)
             
-        # 解码决策特征
+                # Translated comment
         reasoning_logits = self.decision_decoder(reasoning_logits)
         self.spatial_connection_logits = reasoning_logits @ reasoning_logits.t()
         self.spatial_connection_logits = self._min_max_normalize(torch.flatten(self.spatial_connection_logits))
 
-        # 多轮交互推理
+                # Translated comment
         for interaction_round in range(num_interaction_rounds):
             self.current_interaction_round = interaction_round
             reasoning_log_probs += self.construct_spatial_connections()
             reasoning_log_probs += self.construct_temporal_connections(interaction_round)
             
-            # 计算智能体执行顺序（拓扑排序）
+                        # Translated comment
             agent_in_degrees = {agent_id: len(agent.spatial_predecessors) for agent_id, agent in self.agent_execution_nodes.items()}
             execution_queue = [agent_id for agent_id, degree in agent_in_degrees.items() if degree == 0]
 
-            # 按拓扑顺序执行智能体
+                        # Translated comment
             while execution_queue:
                 current_agent_id = execution_queue.pop(0)
                 retry_attempts = 0
@@ -462,7 +435,7 @@ class MultiAgentTopologyManager(ABC):
                         print(f"Agent {current_agent_id} execution error: {e}")
                     retry_attempts += 1
                 
-                # 更新后续智能体的执行队列
+                                # Translated comment
                 for successor_agent in self.agent_execution_nodes[current_agent_id].spatial_successors:
                     if successor_agent.node_id not in self.agent_execution_nodes.keys():
                         continue
@@ -470,10 +443,10 @@ class MultiAgentTopologyManager(ABC):
                     if agent_in_degrees[successor_agent.node_id] == 0:
                         execution_queue.append(successor_agent.node_id)
             
-            # 更新智能体记忆
+                        # Translated comment
             self.update_agent_memories()
             
-        # 执行最终决策
+                # Translated comment
         self.connect_to_decision_executor()
         await self.decision_executor.async_execute_reasoning(task_input)
         
@@ -484,36 +457,36 @@ class MultiAgentTopologyManager(ABC):
         return final_reasoning_results, reasoning_log_probs
     
     def update_agent_memories(self):
-        """更新智能体记忆"""
-        # 同步所有智能体的轮次信息
+        """Translated function documentation."""
+                # Translated comment
         for agent_id, agent_node in self.agent_execution_nodes.items():
             agent_node.set_current_interaction_round(self.current_interaction_round)
             agent_node.update_interaction_memory()
         
-        # 如果使用神经时间图网络，进行额外的记忆管理
+                # Translated comment
         if self.use_neural_temporal_graph and self.neural_temporal_graph is not None:
-            # 神经时间图网络的记忆更新在前向传播中自动完成
+                        # Translated comment
             pass
     
     def connect_to_decision_executor(self):
-        """连接到决策执行器"""
+        """Translated function documentation."""
         for agent_node in self.agent_execution_nodes.values():
             self.decision_executor.add_predecessor_connection(agent_node, 'spatial')
     
     def reset_neural_temporal_memories(self):
-        """重置神经时间图网络的记忆"""
+        """Translated function documentation."""
         if self.use_neural_temporal_graph and self.neural_temporal_graph is not None:
             self.neural_temporal_graph.reset_agent_memories()
             self.current_interaction_round = 0
     
     def get_neural_memory_snapshot(self):
-        """获取神经网络的记忆状态快照"""
+        """Translated function documentation."""
         if self.use_neural_temporal_graph and self.neural_temporal_graph is not None:
             return self.neural_temporal_graph.get_memory_snapshot()
         return None
     
     def optimize_connection_topology(self, pruning_ratio: float) -> Tuple[torch.Tensor, torch.Tensor]:
-        """优化连接拓扑结构"""
+        """Translated function documentation."""
         if self.enable_spatial_optimization:
             active_spatial_connections = (self.spatial_connection_masks > 0).sum()
             inactive_spatial_connections = (self.spatial_connection_masks == 0).sum()
@@ -543,7 +516,7 @@ class MultiAgentTopologyManager(ABC):
         return self.spatial_connection_masks, self.temporal_connection_masks
 
     def _min_max_normalize(self, tensor: torch.Tensor) -> torch.Tensor:
-        """最小-最大归一化"""
+        """Translated function documentation."""
         min_val = tensor.min()
         max_val = tensor.max()
         if max_val - min_val == 0:
@@ -551,36 +524,15 @@ class MultiAgentTopologyManager(ABC):
         return (tensor - min_val) / (max_val - min_val)
     
     # ========================================================================
-    # FSM模式方法（新增）
+        # Translated comment
     # ========================================================================
     
     def initialize_fsm_from_description(self, fsm_description: Dict[str, Any]):
-        """
-        从FSM描述初始化有限状态机
-        
-        Args:
-            fsm_description: FSM描述字典，包含：
-                - states: 状态列表
-                - listeners: 监听关系
-        
-        示例:
-            {
-                'states': [
-                    {'id': 0, 'name': 'Analyze', 'agent': 'agent_0', 'is_initial': True},
-                    {'id': 1, 'name': 'Solve', 'agent': 'agent_1'},
-                    {'id': 2, 'name': 'Verify', 'agent': 'agent_2', 'is_final': True}
-                ],
-                'listeners': {
-                    0: ['agent_1', 'agent_2'],  # State 0输出传给agent_1和agent_2
-                    1: ['agent_2'],              # State 1输出传给agent_2
-                    2: []                        # State 2是最终状态，无需监听
-                }
-            }
-        """
+        """Translated function documentation."""
         agent_ids = list(self.agent_execution_nodes.keys())
         self.fsm_state_manager = FSMStateManager(agent_ids)
         
-        # 添加所有状态
+                # Translated comment
         for state_desc in fsm_description.get('states', []):
             self.fsm_state_manager.add_state(
                 state_id=state_desc['id'],
@@ -591,12 +543,12 @@ class MultiAgentTopologyManager(ABC):
                 description=state_desc.get('description', '')
             )
         
-        # 设置监听关系（通信路径）
+                # Translated comment
         listeners_dict = fsm_description.get('listeners', {})
         for state_id, listener_ids in listeners_dict.items():
             self.fsm_state_manager.set_listeners(int(state_id), listener_ids)
         
-        # 启用FSM模式
+                # Translated comment
         self.use_fsm_mode = True
         
         print(f"✅ FSM initialized with {len(self.fsm_state_manager.states)} states")
@@ -608,38 +560,19 @@ class MultiAgentTopologyManager(ABC):
                                     max_retry_attempts: int = 3,
                                     max_execution_time: int = 600,
                                     fsm_outputs: Optional[Dict[str, torch.Tensor]] = None) -> Tuple[str, torch.Tensor]:
-        """
-        执行FSM模式的推理
-        
-        核心逻辑：
-        1. 从初始状态开始
-        2. 执行当前状态负责的智能体
-        3. 提取状态转移目标或最终答案
-        4. 将输出传递给监听智能体
-        5. 转移到下一状态
-        6. 重复直到达到最终状态或最大转移次数
-        
-        Args:
-            task_input: 任务输入
-            max_transitions: 最大状态转移次数
-            max_retry_attempts: 每个智能体的最大重试次数
-            max_execution_time: 执行超时时间
-        
-        Returns:
-            (final_answer, reasoning_log_probs)
-        """
+        """Translated function documentation."""
         if not self.use_fsm_mode or self.fsm_state_manager is None:
             raise ValueError("FSM mode is not enabled. Call initialize_fsm_from_description() first.")
         
-        # 重置FSM到初始状态
+                # Translated comment
         self.fsm_state_manager.reset()
         
-        # 初始化推理对数概率（用于策略梯度）
+                # Translated comment
         reasoning_log_probs = torch.tensor(0.0, dtype=torch.float32, requires_grad=True)
         
-        # 状态转移循环
+                # Translated comment
         transition_count = 0
-        last_state_output: Optional[str] = None  # 记录最后一个非终止状态的输出
+        last_state_output: Optional[str] = None          # Translated comment
         
         while transition_count < max_transitions:
             current_state = self.fsm_state_manager.get_current_state()
@@ -647,10 +580,10 @@ class MultiAgentTopologyManager(ABC):
             if current_state is None:
                 return "Error: No current state", reasoning_log_probs
             
-            # 获取负责当前状态的智能体
+                        # Translated comment
             agent_node = self.agent_execution_nodes.get(current_state.responsible_agent_id)
             
-            # 显示 agent 编号和名称
+                        # Translated comment
             if agent_node:
                 agent_display = f"{current_state.responsible_agent_id} ({agent_node.agent_role})"
             else:
@@ -664,7 +597,7 @@ class MultiAgentTopologyManager(ABC):
             if agent_node is None:
                 return f"Error: Agent {current_state.responsible_agent_id} not found", reasoning_log_probs
             
-            # 执行智能体推理
+                        # Translated comment
             retry_attempts = 0
             output = None
             
@@ -678,7 +611,7 @@ class MultiAgentTopologyManager(ABC):
                         timeout=max_execution_time
                     )
                     
-                    # 获取输出
+                                        # Translated comment
                     if agent_node.execution_outputs:
                         output = agent_node.execution_outputs[-1]
                     break
@@ -695,76 +628,76 @@ class MultiAgentTopologyManager(ABC):
             print(f"\n🤖 Agent Output:\n{clean_output[:200]}...")
             last_state_output = output
             
-            # 检查是否是最终状态
+                        # Translated comment
             if current_state.is_final:
                 final_answer = self.fsm_state_manager.check_final_answer(output)
                 if final_answer:
                     print(f"\n✅ Final Answer: {final_answer}")
                     return final_answer, reasoning_log_probs
                 else:
-                    # 最终状态但没有答案标记，直接返回输出
+                                        # Translated comment
                     print(f"\n✅ Reached final state, returning output")
                     return output, reasoning_log_probs
             
-            # 提取状态转移目标
+                        # Translated comment
             next_state_id = self.fsm_state_manager.extract_state_transition(output)
             
-            # 如果从输出中无法提取状态转移标记，尝试使用 TGN 预测的概率来采样下一状态
+                        # Translated comment
             if next_state_id is None:
-                print(f"\n⚠️  无法从 Agent 输出中提取状态转移标记 (<STATE_TRANS>: X)")
-                print(f"   💡 将尝试使用 TGN 预测的状态转移概率进行采样...")
+                print(f"\n⚠️  Failed to extract a state-transition tag from the agent output (<STATE_TRANS>: X)")
+                print(f"   💡 Will try sampling from the TGN-predicted state-transition probabilities...")
                 
-                # 尝试使用 TGN 预测的状态转移概率（如果可用）
+                                # Translated comment
                 if fsm_outputs and 'transition_probs' in fsm_outputs:
                     transition_probs = fsm_outputs['transition_probs']
                     if transition_probs is not None and len(transition_probs) > 0:
-                        # 从概率分布中采样下一状态
+                                                # Translated comment
                         import torch.nn.functional as F
                         if isinstance(transition_probs, torch.Tensor):
-                            # 确保概率分布有效
+                                                        # Translated comment
                             if transition_probs.dim() == 1:
-                                # 使用当前状态的概率分布
+                                                                # Translated comment
                                 sampled_idx = torch.multinomial(transition_probs, num_samples=1).item()
                                 next_state_id = sampled_idx
-                                print(f"   ✅ 使用 TGN 预测的状态转移概率采样")
-                                print(f"   📊 采样结果: State {next_state_id} (概率: {transition_probs[sampled_idx]:.4f})")
+                                print(f"   ✅ Sampled using TGN-predicted state-transition probabilities")
+                                print(f"   📊 Sampled result: State {next_state_id} (probability: {transition_probs[sampled_idx]:.4f})")
                             else:
-                                # 如果是矩阵，使用当前状态对应的行
+                                                                # Translated comment
                                 if current_state.state_id < transition_probs.size(0):
                                     state_probs = transition_probs[current_state.state_id]
                                     sampled_idx = torch.multinomial(state_probs, num_samples=1).item()
                                     next_state_id = sampled_idx
-                                    print(f"   ✅ 使用 TGN 预测的状态转移概率采样")
-                                    print(f"   📊 采样结果: State {next_state_id} (概率: {state_probs[sampled_idx]:.4f})")
+                                    print(f"   ✅ Sampled using TGN-predicted state-transition probabilities")
+                                    print(f"   📊 Sampled result: State {next_state_id} (probability: {state_probs[sampled_idx]:.4f})")
                                 else:
-                                    print(f"   ❌ TGN 预测的状态转移概率矩阵维度不匹配")
+                                    print(f"   ❌ TGN-predicted state-transition probability matrix has mismatched dimensions")
                     else:
-                        print(f"   ❌ TGN 预测的状态转移概率为空或无效")
+                        print(f"   ❌ TGN-predicted state-transition probabilities are empty or invalid")
                 else:
-                    print(f"   ❌ 未找到 TGN 预测的状态转移概率 (fsm_outputs 中无 'transition_probs')")
+                    print(f"   ❌ Could not find TGN-predicted state-transition probabilities ('transition_probs' missing in fsm_outputs)")
                 
-                # 如果仍然无法确定下一状态，尝试转移到下一个顺序状态
+                                # Translated comment
                 if next_state_id is None:
-                    print(f"\n   ⚠️  无法使用 TGN 预测的状态转移概率")
-                    print(f"   💡 将使用降级策略：转移到下一个顺序状态...")
+                    print(f"\n   ⚠️  Could not use TGN-predicted state-transition probabilities")
+                    print(f"   💡 Falling back to the next sequential state...")
                     
-                    # 降级策略：转移到下一个状态（如果存在）
+                                        # Translated comment
                     all_states = list(self.fsm_state_manager.states.keys())
                     current_idx = all_states.index(current_state.state_id) if current_state.state_id in all_states else -1
                     if current_idx >= 0 and current_idx < len(all_states) - 1:
                         next_state_id = all_states[current_idx + 1]
-                        print(f"   ✅ 使用降级策略: State {current_state.state_id} → State {next_state_id}")
+                        print(f"   ✅ Fallback strategy used: State {current_state.state_id} -> State {next_state_id}")
                     else:
-                        print(f"   ❌ 降级策略失败：无法找到下一个顺序状态")
-                        print(f"   ❌ 状态转移失败，终止推理")
+                        print(f"   ❌ Fallback strategy failed: unable to find the next sequential state")
+                        print(f"   ❌ State transition failed; terminating reasoning")
                 return "Error: No state transition found", reasoning_log_probs
             else:
-                print(f"\n✅ 从 Agent 输出中成功提取状态转移标记")
-                print(f"   📋 提取结果: State {current_state.state_id} → State {next_state_id}")
+                print(f"\n✅ Successfully extracted a state-transition tag from the agent output")
+                print(f"   📋 Extracted result: State {current_state.state_id} -> State {next_state_id}")
             
             print(f"\n→ Transitioning to State {next_state_id}")
             
-            # 将输出传递给监听智能体（通信路径）
+                        # Translated comment
             listeners = self.fsm_state_manager.get_listeners(current_state.state_id)
             
             if listeners:
@@ -773,13 +706,13 @@ class MultiAgentTopologyManager(ABC):
                 for listener_id in listeners:
                     listener_node = self.agent_execution_nodes.get(listener_id)
                     if listener_node:
-                        # 将当前状态的输出添加到监听者的上下文
+                                                # Translated comment
                         message = f"\n[Message from {agent_node.agent_role} at State {current_state.state_id}]:\n{output}\n"
-                        # 这里可以通过更新智能体的记忆或提示来传递信息
-                        # 具体实现取决于AgentExecutionNode的接口
+                                                # Translated comment
+                                                # Translated comment
                         listener_node.add_predecessor_message(message)
             
-            # 转移到下一状态
+                        # Translated comment
             success = self.fsm_state_manager.transition_to_state(next_state_id)
             
             if not success:
@@ -787,7 +720,7 @@ class MultiAgentTopologyManager(ABC):
             
             transition_count += 1
         
-        # 达到最大转移次数
+                # Translated comment
         print(f"\n⚠️  Reached maximum transitions ({max_transitions})")
         return "Error: Maximum transitions reached", reasoning_log_probs
     
@@ -808,63 +741,37 @@ class MultiAgentTopologyManager(ABC):
                                                  verbose: bool = True,
                                                  phase: str = "train",
                                                  attack_injector: Optional[Any] = None) -> Tuple[str, torch.Tensor, bool, Dict[int, str]]:
-        """
-        ✨ 使用概率采样执行FSM推理（任务自适应）
-        
-        核心逻辑：
-        1. 从TGN输出的transition_probs中采样下一状态（而不是依赖显式标记）
-        2. 从TGN输出的listener_weights中采样通信路径
-        3. 从总FSM中匹配选中的状态、转移、智能体
-        
-        Args:
-            task_input: 任务输入（问题文本）
-            fsm_outputs: TGN输出字典，包含：
-                - 'transition_probs': [num_states] 状态转移概率分布
-                - 'listener_weights': [num_states, num_agents] 监听关系权重
-            fsm_manager: FSM状态管理器
-            max_transitions: 最大状态转移次数
-            max_retry_attempts: 每个智能体的最大重试次数
-            max_execution_time: 执行超时时间
-            temperature: 采样温度（1.0=原始分布，>1.0=更随机，<1.0=更确定）
-            phase: 执行阶段 ("train", "val", "test")，用于日志区分
-        
-        Returns:
-            (final_answer, reasoning_log_probs, reached_max_transitions, collected_agent_messages)
-            - final_answer: 最终答案
-            - reasoning_log_probs: 推理过程的对数概率（用于策略梯度）
-            - reached_max_transitions: 是否达到最大转移次数（用于惩罚）
-            - collected_agent_messages: ✨ 收集的智能体消息 {agent_id: message}（用于语义一致性检测）
-        """
+        """Translated function documentation."""
         if not self.use_fsm_mode or self.fsm_state_manager is None:
             raise ValueError("FSM mode is not enabled. Call initialize_fsm_from_description() first.")
         
-        # 重置FSM到初始状态
+                # Translated comment
         fsm_manager.reset()
         
-        # ✨ 新增：收集智能体消息（用于语义一致性检测）
+                # Translated comment
         collected_agent_messages = {}
         
-        # ✨ 新增：收集实际采样的通信路径（用于动态图中心性计算）
-        # 格式: [(source_agent_id, target_agent_id), ...]
+                # Translated comment
+                # Translated comment
         sampled_communication_edges = []
 
-        # ✨ 每个新问题开始前，清空所有智能体在上一个问题中的记忆和监听消息
+                # Translated comment
         for agent_node in self.agent_execution_nodes.values():
-            # 清空前序消息（FSM监听得到的跨状态消息）
+                        # Translated comment
             try:
                 agent_node.clear_predecessor_messages()
             except Exception:
                 pass
-            # 重置交互记忆与历史
+                        # Translated comment
             try:
                 agent_node.reset_interaction_memory()
             except Exception:
                 pass
-            # 清空本地输入/输出缓存，避免被后续状态查询到旧结果
+                        # Translated comment
             agent_node.execution_inputs = []
             agent_node.execution_outputs = []
             agent_node.raw_task_inputs = []
-            # 重置 LLM 会话历史，只保留系统提示，避免跨问题的对话累积
+                        # Translated comment
             reasoning_llm = getattr(agent_node, "reasoning_llm", None)
             reasoning_prompt = getattr(agent_node, "reasoning_prompt", None)
             if reasoning_llm is not None and reasoning_prompt is not None:
@@ -873,23 +780,23 @@ class MultiAgentTopologyManager(ABC):
                 except Exception:
                     pass
         
-        # 初始化推理对数概率（用于策略梯度）
+                # Translated comment
         reasoning_log_probs = torch.tensor(0.0, dtype=torch.float32, requires_grad=True)
         
-        # ✨ 标记是否达到最大转移次数（用于惩罚）
+                # Translated comment
         reached_max_transitions = False
         
-        # 获取初始TGN输出（listener_weights是全局的，不需要重新计算）
+                # Translated comment
         listener_weights = None
         if enable_comm_sampling:
             listener_weights = fsm_outputs.get("listener_weights")  # [num_states, num_agents]
             if listener_weights is None:
                 raise ValueError("listener_weights not found in fsm_outputs")
         
-        # 如果禁用状态转移预测，则不使用transition_probs/动态重算
+                # Translated comment
         if enable_transition_prediction:
-            # 如果提供了fsm_tgn，可以在每次状态转移时重新计算transition_probs
-            # 否则使用初始的transition_probs（如果存在）
+                        # Translated comment
+                        # Translated comment
             use_dynamic_transition = (
                 fsm_tgn is not None
                 and question_embedding is not None
@@ -897,7 +804,7 @@ class MultiAgentTopologyManager(ABC):
                 and context_features is not None
             )
             
-            # 初始transition_probs作为第一步/兜底分布
+                        # Translated comment
             transition_probs = fsm_outputs.get("transition_probs")  # [num_states] or [num_states, num_states]
             if transition_probs is None:
                 raise ValueError("transition_probs not found in fsm_outputs and cannot compute dynamically")
@@ -905,9 +812,9 @@ class MultiAgentTopologyManager(ABC):
             use_dynamic_transition = False
             transition_probs = None
         
-        # 状态转移循环
+                # Translated comment
         transition_count = 0
-        last_state_output = None  # 记录最后一个非终止状态的输出，用于传递给最终状态
+        last_state_output = None          # Translated comment
         
         while transition_count < max_transitions:
             current_state = fsm_manager.get_current_state()
@@ -915,10 +822,10 @@ class MultiAgentTopologyManager(ABC):
             if current_state is None:
                 return "Error: No current state", reasoning_log_probs, reached_max_transitions, collected_agent_messages
             
-            # 获取负责当前状态的智能体
+                        # Translated comment
             agent_node = self.agent_execution_nodes.get(current_state.responsible_agent_id)
 
-            # 显示 agent 编号和名称
+                        # Translated comment
             if agent_node:
                 agent_display = f"{current_state.responsible_agent_id} ({agent_node.agent_role})"
             else:
@@ -933,22 +840,22 @@ class MultiAgentTopologyManager(ABC):
             if agent_node is None:
                 return f"Error: Agent {current_state.responsible_agent_id} not found", reasoning_log_probs, reached_max_transitions, collected_agent_messages
             
-            # 执行智能体推理
+                        # Translated comment
             retry_attempts = 0
             output = None
             
             while retry_attempts < max_retry_attempts:
                 try:
-                    # ✨ 状态转移层面：传递上一个状态的直接输出（不附带历史）
-                    # 与监听机制层面（predecessor_messages）独立运作
+                                        # Translated comment
+                                        # Translated comment
                     if last_state_output is not None:
-                        # ✨ 最终状态需要完整的上一状态输出（用于代码精炼等任务）
-                        # 非最终状态使用较短的截断以节省token
+                                                # Translated comment
+                                                # Translated comment
                         if current_state.is_final:
-                            # 最终状态：不截断，保留完整输出（代码生成任务需要完整代码）
+                                                        # Translated comment
                             truncated_prev_output = str(last_state_output)
                         else:
-                            # 中间状态：限制长度以节省token
+                                                        # Translated comment
                             MAX_PREVIOUS_OUTPUT_LENGTH = 500
                         truncated_prev_output = str(last_state_output)
                         if len(truncated_prev_output) > MAX_PREVIOUS_OUTPUT_LENGTH:
@@ -970,7 +877,7 @@ class MultiAgentTopologyManager(ABC):
                         timeout=max_execution_time
                     )
                     
-                    # 获取输出
+                                        # Translated comment
                     if agent_node.execution_outputs:
                         output = agent_node.execution_outputs[-1]
                     break
@@ -982,17 +889,17 @@ class MultiAgentTopologyManager(ABC):
             if output is None:
                 return "Error: Agent execution failed", reasoning_log_probs, reached_max_transitions, collected_agent_messages
             
-            # ✨ 应用消息污染攻击（如果启用）
-            # 被攻击的智能体的输出会被污染，影响传递给其他智能体的消息
+                        # Translated comment
+                        # Translated comment
             if attack_injector is not None and hasattr(attack_injector, 'pollute_message'):
-                # 获取当前智能体的ID（从 responsible_agent_id 中提取数字部分）
+                                # Translated comment
                 agent_id_str = current_state.responsible_agent_id
                 try:
                     agent_idx = int(agent_id_str.split('_')[-1]) if '_' in agent_id_str else int(agent_id_str)
                 except (ValueError, IndexError):
                     agent_idx = 0
                 
-                # 检查是否需要污染消息
+                                # Translated comment
                 if attack_injector.should_pollute_message(agent_idx):
                     original_output = output
                     output = attack_injector.pollute_message(
@@ -1001,12 +908,12 @@ class MultiAgentTopologyManager(ABC):
                         pollution_type=attack_injector.attack_type
                     )
                     if verbose:
-                        print(f"  🔴 消息已被污染 (Agent {agent_idx}, 攻击类型: {attack_injector.attack_type})")
+                        print(f"  🔴 Message was polluted (Agent {agent_idx}, attack type: {attack_injector.attack_type})")
             
-            # 记录最后一个状态的输出（用于传递给最终状态）
+                        # Translated comment
             last_state_output = output
             
-            # ✨ 收集智能体消息（用于语义一致性检测）
+                        # Translated comment
             try:
                 agent_id_str = current_state.responsible_agent_id
                 agent_idx = int(agent_id_str.split('_')[-1]) if '_' in agent_id_str else int(agent_id_str)
@@ -1017,9 +924,9 @@ class MultiAgentTopologyManager(ABC):
             if verbose:
                 print(f"\n🤖 Agent Output:\n{output[:200]}...")
             
-            # 检查是否是最终状态
+                        # Translated comment
             if current_state.is_final:
-                # ✨ 将采样的通信边添加到返回数据中（用于动态图中心性计算）
+                                # Translated comment
                 collected_agent_messages['_communication_edges'] = sampled_communication_edges
                 
                 final_answer = fsm_manager.check_final_answer(output)
@@ -1028,17 +935,17 @@ class MultiAgentTopologyManager(ABC):
                         print(f"\n✅ Final Answer: {final_answer}")
                     return final_answer, reasoning_log_probs, reached_max_transitions, collected_agent_messages
                 else:
-                    # 最终状态但没有答案标记，直接返回输出
+                                        # Translated comment
                     if verbose:
                         print(f"\n✅ Reached final state, returning output")
                     return output, reasoning_log_probs, reached_max_transitions, collected_agent_messages
             
-            # ✨ 选择下一状态
+                        # Translated comment
             current_state_id = current_state.state_id
 
-            # --- 1) 状态转移选择 ---
+                        # Translated comment
             if enable_transition_prediction:
-                # 动态转移：每次状态转移时重新计算 transition_probs
+                                # Translated comment
                 if use_dynamic_transition:
                     num_agents = agent_features.size(0)
                     if num_agents > 1:
@@ -1065,7 +972,7 @@ class MultiAgentTopologyManager(ABC):
                 if transition_probs is None:
                     raise ValueError("transition_probs is None (enable_transition_prediction=True)")
 
-                # 获取当前状态的转移概率分布
+                                # Translated comment
                 if transition_probs.dim() == 1:
                     state_transition_probs = transition_probs
                 elif transition_probs.dim() == 2:
@@ -1073,7 +980,7 @@ class MultiAgentTopologyManager(ABC):
                 else:
                     raise ValueError(f"Unexpected transition_probs shape: {transition_probs.shape}")
 
-                # --- 2) 初始状态约束 + 采样 ---
+                                # Translated comment
                 initial_state = fsm_manager.get_initial_state()
                 if initial_state is not None and current_state_id == initial_state.state_id:
                     final_state_ids = [
@@ -1089,17 +996,17 @@ class MultiAgentTopologyManager(ABC):
                         if masked_probs.sum() > 0:
                             state_transition_probs = masked_probs / masked_probs.sum()
                             if verbose:
-                                print("\n⚖️  初始状态约束：已暂时屏蔽直达最终状态的转移概率")
+                                print("\n⚖️  Initial-state constraint: temporarily masked transitions that jump directly to the final state")
                         else:
                             if verbose:
-                                print("\n⚠️  初始状态约束导致所有概率为0，回退到原始分布")
+                                print("\n⚠️  Initial-state constraint made all probabilities zero; falling back to the original distribution")
 
-                # 温度调节
+                                # Translated comment
                 if temperature != 1.0:
                     logits = torch.log(state_transition_probs + 1e-8) / temperature
                     state_transition_probs = torch.nn.functional.softmax(logits, dim=-1)
 
-                # 采样下一状态（默认不采样自环）
+                                # Translated comment
                 probs = state_transition_probs.clone()
                 if current_state_id < probs.size(0):
                     probs[current_state_id] = 0.0
@@ -1108,12 +1015,12 @@ class MultiAgentTopologyManager(ABC):
 
                 sampled_next_state_id = torch.multinomial(probs.unsqueeze(0), num_samples=1).item()
 
-                # 计算采样动作的对数概率，用于策略梯度损失
+                                # Translated comment
                 sampled_prob = probs[sampled_next_state_id]
                 sampled_log_prob = torch.log(sampled_prob + 1e-8)
                 reasoning_log_probs = reasoning_log_probs + sampled_log_prob
             else:
-                # 消融：不使用TGN转移预测，改为固定状态推进 i -> i+1
+                                # Translated comment
                 all_state_ids = sorted(list(fsm_manager.states.keys()))
                 if not all_state_ids:
                     return (
@@ -1129,47 +1036,47 @@ class MultiAgentTopologyManager(ABC):
                     sampled_next_state_id = all_state_ids[-1]
 
                 if verbose:
-                    print("\n📊 消融：禁用转移预测，使用固定状态推进")
-                    print(f"\n→ 固定转移: State {current_state_id} → State {sampled_next_state_id}")
+                    print("\n📊 Ablation: transition prediction disabled; using fixed state progression")
+                    print(f"\n-> Fixed transition: State {current_state_id} -> State {sampled_next_state_id}")
 
-            # ✨ 仅记录采样结果（状态名称）
+                        # Translated comment
             current_state_name = current_state.state_name if current_state else f"State_{current_state_id}"
             sampled_state_obj = fsm_manager.states.get(sampled_next_state_id)
             sampled_state_name = sampled_state_obj.state_name if sampled_state_obj else f"State_{sampled_next_state_id}"
 
             if phase == "val":
-                log_prefix = "✅ 验证"
+                log_prefix = "✅ Validation"
             elif phase == "test":
-                log_prefix = "🧪 测试"
+                log_prefix = "🧪 Test"
             else:
-                log_prefix = "🎯 训练"
+                log_prefix = "🎯 Train"
 
             if verbose:
                 if enable_transition_prediction:
-                    print("\n📊 使用 TGN 预测的状态转移概率进行采样")
-                    print(f"   📈 当前状态 {current_state_id} ({current_state_name}) 的转移概率分布:")
+                    print("\n📊 Sampling with TGN-predicted state-transition probabilities")
+                    print(f"   📈 Transition probability distribution for current state {current_state_id} ({current_state_name}):")
                     for state_id, prob in enumerate(state_transition_probs):
                         marker = "👉" if state_id == sampled_next_state_id else "  "
                         state_obj = fsm_manager.states.get(state_id)
                         state_name = state_obj.state_name if state_obj else f"State_{state_id}"
                         print(f"   {marker} State {state_id} ({state_name}): {prob:.4f}")
                     print(
-                        f"\n→ 采样结果: State {current_state_id} ({current_state_name}) "
+                        f"\n-> Sampled result: State {current_state_id} ({current_state_name}) "
                         f"→ State {sampled_next_state_id} ({sampled_state_name}) "
-                        f"(概率: {state_transition_probs[sampled_next_state_id]:.4f})"
+                        f"(probability: {state_transition_probs[sampled_next_state_id]:.4f})"
                     )
                 else:
                     print(
-                        f"\n→ 固定转移: State {current_state_id} ({current_state_name}) "
+                        f"\n-> Fixed transition: State {current_state_id} ({current_state_name}) "
                         f"→ State {sampled_next_state_id} ({sampled_state_name})"
                     )
             else:
                 print(
-                    f"{log_prefix} 状态转移: State {current_state_id} ({current_state_name}) "
+                    f"{log_prefix} State transition: State {current_state_id} ({current_state_name}) "
                     f"→ State {sampled_next_state_id} ({sampled_state_name})"
                 )
 
-            # ✨ 选择通信路径（监听者）
+                        # Translated comment
             sampled_listeners: List[str] = []
             if enable_comm_sampling:
                 if listener_weights is None:
@@ -1200,14 +1107,14 @@ class MultiAgentTopologyManager(ABC):
             else:
                 sampled_listeners = []
                 if verbose or phase in ["val", "test"]:
-                    print("   📡 消融：禁用通信采样，关闭监听广播（0个监听者）")
+                    print("   📡 Ablation: communication sampling disabled; listener broadcast turned off (0 listeners)")
             
-            # ✨ 更新FSM管理器中的监听关系（用于损失函数计算）
-            # 注意：即便没有监听者，也要显式写入空列表，避免残留上一题/上一步的listeners
+                        # Translated comment
+                        # Translated comment
             fsm_manager.set_listeners(current_state_id, sampled_listeners)
             
             if sampled_listeners:
-                # 显示监听者的编号和名称
+                                # Translated comment
                 listener_display = []
                 for listener_id in sampled_listeners:
                     listener_node = self.agent_execution_nodes.get(listener_id)
@@ -1216,39 +1123,39 @@ class MultiAgentTopologyManager(ABC):
                     else:
                         listener_display.append(listener_id)
                 
-                # 根据verbose和phase决定是否显示监听者
+                                # Translated comment
                 if verbose or phase in ["val", "test"]:
-                    print(f"   📡 监听者: {listener_display}")
+                    print(f"   📡 Listeners: {listener_display}")
                 
-                # ✨ 记录实际采样的通信边（用于动态图中心性计算）
-                # 当前状态的agent → 所有监听者
+                                # Translated comment
+                                # Translated comment
                 current_agent_id = current_state.responsible_agent_id
                 for listener_id in sampled_listeners:
-                    if listener_id != current_agent_id:  # 避免自环
+                    if listener_id != current_agent_id:                      # Translated comment
                         sampled_communication_edges.append((current_agent_id, listener_id))
                 
                 for listener_id in sampled_listeners:
                     listener_node = self.agent_execution_nodes.get(listener_id)
                     if listener_node:
-                        # ✨ 成本优化：截断消息长度，避免监听消息过长导致token爆炸
-                        MAX_MESSAGE_LENGTH = 400  # 每条监听消息最多400字符（避免上下文爆炸）
+                                                # Translated comment
+                        MAX_MESSAGE_LENGTH = 400                          # Translated comment
                         truncated_output = str(output)
                         if len(truncated_output) > MAX_MESSAGE_LENGTH:
                             truncated_output = truncated_output[:MAX_MESSAGE_LENGTH] + "...[truncated]"
                         message = f"\n[Message from {agent_node.agent_role} at State {current_state.state_id}]:\n{truncated_output}\n"
                         listener_node.add_predecessor_message(message)
             
-            # 执行状态转移（完全由TGN概率控制路径，不再用条件阻塞）
+                        # Translated comment
             success = fsm_manager.transition_to_state(sampled_next_state_id)
             
             if not success:
                 sampled_state_obj = fsm_manager.states.get(sampled_next_state_id)
                 sampled_state_name = sampled_state_obj.state_name if sampled_state_obj else f"State_{sampled_next_state_id}"
                 if verbose:
-                    print(f"⚠️  无法转移到状态 {sampled_next_state_id} ({sampled_state_name})，尝试使用概率最高的状态")
-                # 如果采样失败：
-                # - 正常模式：使用概率最高的状态
-                # - 消融模式（固定推进）：使用“最后一个状态”作为兜底
+                    print(f"⚠️  Unable to transition to state {sampled_next_state_id} ({sampled_state_name}); trying the highest-probability state instead")
+                                # Translated comment
+                                # Translated comment
+                                # Translated comment
                 if enable_transition_prediction:
                     fallback_state_id = torch.argmax(state_transition_probs).item()
                 else:
@@ -1260,28 +1167,28 @@ class MultiAgentTopologyManager(ABC):
             
             transition_count += 1
         
-        # ✨ 达到最大转移次数：如果还没到最终状态，强制跳到最终状态并给出结果
-        # 标记为达到最大转移次数，用于后续惩罚
+                # Translated comment
+                # Translated comment
         reached_max_transitions = True
         
         current_state = fsm_manager.get_current_state()
         current_state_name = current_state.state_name if current_state else "Unknown"
         if verbose:
             print(f"\n⚠️  Reached maximum transitions ({max_transitions})")
-            print(f"  📍 当前位置: State {current_state.state_id} ({current_state_name})")
+            print(f"  📍 Current position: State {current_state.state_id} ({current_state_name})")
 
-        # 查找一个最终状态
+                # Translated comment
         final_states = [s for s in fsm_manager.states.values() if s.is_final]
         if not final_states:
             if verbose:
-                print("  ❌ 没有定义最终状态，返回错误")
+                print("  ❌ No final state is defined; returning an error")
             return "Error: Maximum transitions reached and no final state defined", reasoning_log_probs, reached_max_transitions, collected_agent_messages
         
         final_state = final_states[0]
-        print(f"  ⚠️  未在限制步数内到达最终状态，强制跳转到最终状态 State {final_state.state_id} ({final_state.state_name})")
+        print(f"  ⚠️  The final state was not reached within the step limit; forcing a jump to final state {final_state.state_id} ({final_state.state_name})")
         fsm_manager.transition_to_state(final_state.state_id)
         
-        # 执行最终状态的智能体一次，给出最后结果
+                # Translated comment
         agent_node = self.agent_execution_nodes.get(final_state.responsible_agent_id)
         if agent_node is None:
             return f"Error: Final agent {final_state.responsible_agent_id} not found", reasoning_log_probs, reached_max_transitions, collected_agent_messages
@@ -1290,8 +1197,8 @@ class MultiAgentTopologyManager(ABC):
         output = None
         while retry_attempts < max_retry_attempts:
             try:
-                # ✨ 最终状态：传递上一个状态的输出作为推理依据
-                # ✨ 不截断，保留完整输出（代码生成任务需要完整代码）
+                                # Translated comment
+                                # Translated comment
                 if last_state_output is not None:
                     final_input = (
                         f"{task_input}\n\n"
@@ -1320,7 +1227,7 @@ class MultiAgentTopologyManager(ABC):
         clean_output = re.sub(r'<\|[^>]+?\|>', '', output)
         print(f"\n🤖 Final Agent Output:\n{clean_output[:200]}...")
         
-        # ✨ 将采样的通信边添加到返回数据中
+                # Translated comment
         collected_agent_messages['_communication_edges'] = sampled_communication_edges
         
         final_answer = fsm_manager.check_final_answer(output)
@@ -1334,27 +1241,13 @@ class MultiAgentTopologyManager(ABC):
     def learn_fsm_from_data(self, 
                            training_samples: List[Dict[str, Any]],
                            num_states: int = 4) -> Dict[str, Any]:
-        """
-        从训练数据中学习FSM结构
-        
-        使用TGN学习：
-        1. 最优状态数量
-        2. 状态转移概率
-        3. 监听关系（通信路径）
-        
-        Args:
-            training_samples: 训练样本列表
-            num_states: 状态数量
-        
-        Returns:
-            学习到的FSM描述
-        """
-        # TODO: 实现基于TGN的FSM学习
-        # 这里先返回一个默认的FSM结构
+        """Translated function documentation."""
+                # Translated comment
+                # Translated comment
         
         agent_ids = list(self.agent_execution_nodes.keys())
         
-        # 默认FSM：状态数 = 智能体数
+                # Translated comment
         fsm_description = {
             'states': [],
             'listeners': {}
@@ -1370,7 +1263,7 @@ class MultiAgentTopologyManager(ABC):
             }
             fsm_description['states'].append(state)
             
-            # 默认监听关系：当前状态输出传给下一个状态的智能体
+                        # Translated comment
             if i < num_states - 1:
                 fsm_description['listeners'][i] = [agent_ids[i + 1]]
             else:
@@ -1379,5 +1272,5 @@ class MultiAgentTopologyManager(ABC):
         return fsm_description
 
 
-# 导出主要类
+# Translated comment
 __all__ = ['MultiAgentTopologyManager']
