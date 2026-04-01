@@ -1,12 +1,12 @@
 """
 LLM Cost Loss Function
-LLM成本损失函数
+LLM cost loss functions
 
-功能:
-1. 计算episode的LLM调用成本
-2. 成本损失函数（鼓励减少LLM调用）
-3. 与其他损失函数组合
-4. 成本归一化和缩放
+Features:
+1. Compute the LLM call cost for an episode.
+2. Define a cost loss that encourages fewer LLM calls.
+3. Combine cost loss with other loss functions.
+4. Normalize and scale cost values.
 """
 
 import torch
@@ -15,21 +15,21 @@ from typing import List, Dict, Optional, Tuple
 
 
 class CostLoss(nn.Module):
-    """LLM成本损失函数"""
+    """LLM cost loss."""
     
     def __init__(self, 
                  baseline_cost: float = 0.005,
                  cost_scale: float = 30.0,
                  reduction: str = 'mean'):
         """
-        初始化成本损失
+        Initialize the cost loss.
         
         Args:
-            baseline_cost: 基准成本（美元/问题），用于归一化
-                - gpt-5-nano 每问题实际成本约 $0.0016
-                - 默认 $0.005 使归一化后的值 ≈ 0.32
-            cost_scale: 成本缩放因子
-                - 默认 30，使成本损失更温和（避免主导训练）
+            baseline_cost: Baseline cost in USD per question, used for normalization.
+                - For `gpt-5-nano`, the real cost is about $0.0016 per question.
+                - The default `$0.005` makes the normalized value about 0.32.
+            cost_scale: Cost scaling factor.
+                - The default `30` keeps cost loss milder so it does not dominate training.
             reduction: 'mean', 'sum', 'none'
         """
         super().__init__()
@@ -41,27 +41,27 @@ class CostLoss(nn.Module):
                 episode_costs: torch.Tensor,
                 target_costs: Optional[torch.Tensor] = None) -> torch.Tensor:
         """
-        计算成本损失
+        Compute the cost loss.
         
         Args:
-            episode_costs: [batch_size] 每个episode的实际成本（美元）
-            target_costs: [batch_size] 目标成本（可选）
+            episode_costs: `[batch_size]` actual cost in USD for each episode.
+            target_costs: `[batch_size]` target costs, optional.
         
         Returns:
-            cost_loss: 标量或[batch_size]
+            cost_loss: Scalar or `[batch_size]`.
         """
-        # 归一化成本（相对于baseline）
+        # Normalize costs relative to the baseline.
         normalized_costs = episode_costs / self.baseline_cost
         
         if target_costs is not None:
-            # 如果有目标成本，计算与目标的偏差
+            # If target costs exist, compute deviation from the target.
             normalized_targets = target_costs / self.baseline_cost
             loss = torch.abs(normalized_costs - normalized_targets)
         else:
-            # 否则，直接惩罚高成本
+            # Otherwise, directly penalize high cost.
             loss = normalized_costs
         
-        # 缩放到合适的数值范围
+        # Scale to a suitable numerical range.
         loss = loss * self.cost_scale
         
         # Reduction
@@ -74,19 +74,19 @@ class CostLoss(nn.Module):
 
 
 class AdaptiveCostLoss(nn.Module):
-    """自适应成本损失（考虑任务难度）"""
+    """Adaptive cost loss that considers task difficulty."""
     
     def __init__(self, 
                  baseline_cost: float = 0.005,
                  cost_scale: float = 30.0,
                  difficulty_aware: bool = True):
         """
-        初始化自适应成本损失
+        Initialize the adaptive cost loss.
         
         Args:
-            baseline_cost: 基准成本（美元/问题）
-            cost_scale: 成本缩放因子
-            difficulty_aware: 是否考虑任务难度
+            baseline_cost: Baseline cost in USD per question.
+            cost_scale: Cost scaling factor.
+            difficulty_aware: Whether to consider task difficulty.
         """
         super().__init__()
         self.baseline_cost = baseline_cost
@@ -98,31 +98,31 @@ class AdaptiveCostLoss(nn.Module):
                 task_difficulties: Optional[torch.Tensor] = None,
                 accuracy_scores: Optional[torch.Tensor] = None) -> torch.Tensor:
         """
-        计算自适应成本损失
+        Compute adaptive cost loss.
         
         Args:
-            episode_costs: [batch_size] episode成本
-            task_difficulties: [batch_size] 任务难度 (0-1, 1=困难)
-            accuracy_scores: [batch_size] 准确率 (0-1)
+            episode_costs: `[batch_size]` episode costs.
+            task_difficulties: `[batch_size]` task difficulty in `[0, 1]`, where `1` is hard.
+            accuracy_scores: `[batch_size]` accuracy in `[0, 1]`.
         
         Returns:
-            cost_loss: 标量
+            cost_loss: Scalar.
         """
         normalized_costs = episode_costs / self.baseline_cost
         
         if self.difficulty_aware and task_difficulties is not None:
-            # 对于困难任务，允许更高的成本
-            # 对于简单任务，更严格地惩罚高成本
+            # Allow higher cost for difficult tasks.
+            # Penalize high cost more strictly for easier tasks.
             difficulty_weight = 1.0 - task_difficulties * 0.5  # [0.5, 1.0]
             loss = normalized_costs * difficulty_weight
         else:
             loss = normalized_costs
         
         if accuracy_scores is not None:
-            # 如果准确率低但成本高，额外惩罚
-            # 如果准确率高，成本高可以接受
+            # Apply extra penalty when accuracy is low but cost is high.
+            # If accuracy is high, high cost is more acceptable.
             cost_efficiency = accuracy_scores / (normalized_costs + 1e-8)
-            # 低效率（高成本低准确率）增加损失
+            # Inefficiency means high cost with low accuracy.
             efficiency_penalty = torch.clamp(1.0 - cost_efficiency, min=0.0, max=2.0)
             loss = loss + efficiency_penalty
         
@@ -131,7 +131,7 @@ class AdaptiveCostLoss(nn.Module):
 
 
 class CostRegularizedLoss(nn.Module):
-    """成本正则化损失（组合损失）"""
+    """Cost-regularized combined loss."""
     
     def __init__(self, 
                  alpha: float = 1.0,
@@ -141,18 +141,18 @@ class CostRegularizedLoss(nn.Module):
                  baseline_cost: float = 0.005,
                  cost_scale: float = 30.0):
         """
-        初始化四目标组合损失
+        Initialize the four-objective combined loss.
         
         Args:
-            alpha: 策略梯度损失权重
-            beta: 状态转移损失权重
-            gamma: 监听路径损失权重
-            delta: 成本损失权重
-            baseline_cost: 基准成本（美元/问题）
-                - gpt-5-nano 每问题实际成本约 $0.0016
-                - 默认 $0.005 使成本损失对高成本有适度惩罚
-            cost_scale: 成本缩放因子
-                - 默认 30，使成本损失更温和（避免主导训练）
+            alpha: Weight for policy-gradient loss.
+            beta: Weight for state-transition loss.
+            gamma: Weight for listener-path loss.
+            delta: Weight for cost loss.
+            baseline_cost: Baseline cost in USD per question.
+                - For `gpt-5-nano`, the real cost is about $0.0016 per question.
+                - The default `$0.005` gives a moderate penalty for high cost.
+            cost_scale: Cost scaling factor.
+                - The default `30` keeps cost loss milder so it does not dominate training.
         """
         super().__init__()
         self.alpha = alpha
@@ -168,27 +168,27 @@ class CostRegularizedLoss(nn.Module):
                 listener_loss: torch.Tensor,
                 episode_costs: torch.Tensor) -> Tuple[torch.Tensor, Dict[str, float]]:
         """
-        计算组合损失
+        Compute the combined loss.
         
         Args:
-            policy_loss: 策略梯度损失
-            transition_loss: 状态转移损失
-            listener_loss: 监听路径损失
-            episode_costs: episode成本
+            policy_loss: Policy-gradient loss.
+            transition_loss: State-transition loss.
+            listener_loss: Listener-path loss.
+            episode_costs: Episode costs.
         
         Returns:
             (total_loss, loss_dict)
         """
-        # 计算成本损失
+        # Compute the cost loss.
         cost_loss = self.cost_loss_fn(episode_costs)
         
-        # 组合
+        # Combine all loss terms.
         total_loss = (self.alpha * policy_loss + 
                      self.beta * transition_loss + 
                      self.gamma * listener_loss + 
                      self.delta * cost_loss)
         
-        # 返回详细损失
+        # Return detailed loss values.
         loss_dict = {
             'total': total_loss.item(),
             'policy': policy_loss.item(),
@@ -204,18 +204,18 @@ class CostRegularizedLoss(nn.Module):
         return total_loss, loss_dict
 
 
-# ========== 辅助函数 ==========
+# ========== Helper Functions ==========
 
 def calculate_episode_cost(cost_tracker, episode_start_idx: int) -> float:
     """
-    从cost_tracker计算episode成本
+    Compute the episode cost from a `cost_tracker`.
     
     Args:
-        cost_tracker: LLMCostTracker实例
-        episode_start_idx: episode开始的调用索引
+        cost_tracker: `LLMCostTracker` instance.
+        episode_start_idx: Call index where the episode starts.
     
     Returns:
-        episode成本（美元）
+        Episode cost in USD.
     """
     episode_calls = cost_tracker.call_history[episode_start_idx:]
     return sum(call.cost_usd for call in episode_calls)
@@ -223,14 +223,14 @@ def calculate_episode_cost(cost_tracker, episode_start_idx: int) -> float:
 
 def batch_episode_costs(costs_list: List[float], device='cpu') -> torch.Tensor:
     """
-    将episode成本列表转换为tensor
+    Convert a list of episode costs to a tensor.
     
     Args:
-        costs_list: 成本列表
-        device: 设备
+        costs_list: List of costs.
+        device: Device.
     
     Returns:
-        成本tensor
+        Cost tensor.
     """
     return torch.tensor(costs_list, dtype=torch.float32, device=device)
 
@@ -240,16 +240,16 @@ def estimate_baseline_cost(model_name: str,
                           avg_output_tokens: int = 200,
                           avg_calls_per_episode: int = 5) -> float:
     """
-    估算基准成本
+    Estimate the baseline cost.
     
     Args:
-        model_name: 模型名称
-        avg_input_tokens: 平均输入token数
-        avg_output_tokens: 平均输出token数
-        avg_calls_per_episode: 每episode平均调用次数
+        model_name: Model name.
+        avg_input_tokens: Average number of input tokens.
+        avg_output_tokens: Average number of output tokens.
+        avg_calls_per_episode: Average number of calls per episode.
     
     Returns:
-        基准成本（美元）
+        Baseline cost in USD.
     """
     from neural_fsm_mas.utils.llm_cost_tracker import LLMPricingRegistry
     
@@ -260,19 +260,19 @@ def estimate_baseline_cost(model_name: str,
     return baseline
 
 
-# ========== 测试示例 ==========
+# ========== Test Example ==========
 
 if __name__ == "__main__":
     print("Testing Cost Loss Functions...\n")
     
-    # 1. 基础成本损失
+    # 1. Basic cost loss.
     print("="*60)
     print("1. Basic Cost Loss")
     print("="*60)
     
     cost_loss = CostLoss(baseline_cost=0.005, cost_scale=100.0)
     
-    # 模拟一批episode成本（基于gpt-5-nano实际成本 ~$0.0016/问题）
+    # Simulate a batch of episode costs based on the real `gpt-5-nano` cost of about $0.0016 per question.
     episode_costs = torch.tensor([0.0012, 0.0018, 0.0015, 0.0020])
     print(f"Episode costs: {episode_costs.tolist()}")
     print(f"Baseline: $0.005, Scale: 100")
@@ -280,16 +280,16 @@ if __name__ == "__main__":
     loss = cost_loss(episode_costs)
     print(f"Cost loss: {loss.item():.4f}\n")
     
-    # 2. 自适应成本损失
+    # 2. Adaptive cost loss.
     print("="*60)
     print("2. Adaptive Cost Loss")
     print("="*60)
     
     adaptive_cost_loss = AdaptiveCostLoss(baseline_cost=0.005, cost_scale=100.0)
     
-    # 模拟任务难度和准确率
-    task_difficulties = torch.tensor([0.2, 0.8, 0.3, 0.9])  # 困难度
-    accuracy_scores = torch.tensor([0.9, 0.7, 0.8, 0.6])    # 准确率
+    # Simulate task difficulty and accuracy.
+    task_difficulties = torch.tensor([0.2, 0.8, 0.3, 0.9])  # Difficulty.
+    accuracy_scores = torch.tensor([0.9, 0.7, 0.8, 0.6])    # Accuracy.
     
     print(f"Episode costs: {episode_costs.tolist()}")
     print(f"Task difficulties: {task_difficulties.tolist()}")
@@ -298,7 +298,7 @@ if __name__ == "__main__":
     loss = adaptive_cost_loss(episode_costs, task_difficulties, accuracy_scores)
     print(f"Adaptive cost loss: {loss.item():.4f}\n")
     
-    # 3. 组合损失
+    # 3. Combined loss.
     print("="*60)
     print("3. Cost-Regularized Combined Loss")
     print("="*60)
@@ -308,10 +308,10 @@ if __name__ == "__main__":
         baseline_cost=0.005, cost_scale=100.0
     )
     
-    # 模拟其他损失（基于实际实验数据量级）
-    policy_loss = torch.tensor(32.0)    # 实际约 31-35
-    transition_loss = torch.tensor(7.5)  # 实际约 7-8
-    listener_loss = torch.tensor(3.2)    # 实际约 3.2
+    # Simulate the other loss terms based on practical experiment scales.
+    policy_loss = torch.tensor(32.0)    # Typically around 31-35.
+    transition_loss = torch.tensor(7.5)  # Typically around 7-8.
+    listener_loss = torch.tensor(3.2)    # Typically around 3.2.
     
     total_loss, loss_dict = combined_loss(
         policy_loss, transition_loss, listener_loss, episode_costs
@@ -323,7 +323,7 @@ if __name__ == "__main__":
     
     print(f"\nTotal Loss: {total_loss.item():.4f}\n")
     
-    # 4. 基准成本估算
+    # 4. Baseline cost estimation.
     print("="*60)
     print("4. Baseline Cost Estimation")
     print("="*60)
@@ -343,4 +343,3 @@ if __name__ == "__main__":
         avg_calls_per_episode=5
     )
     print(f"Estimated baseline cost for gpt-4o: ${baseline:.6f}\n")
-
