@@ -1,9 +1,9 @@
 """
-文本嵌入模块
+Text embedding module
 Text Embedding Module
 
-使用Sentence Transformers将文本（智能体描述、状态描述）转换为向量表示
-参考GDesigner的profile_embedding.py实现
+Use Sentence Transformers to convert text (agent descriptions, state descriptions) into vector representations
+Referenced from GDesigner's profile_embedding.py implementation
 """
 
 import numpy as np
@@ -14,40 +14,40 @@ from sentence_transformers import SentenceTransformer
 
 class TextEmbeddingModel:
     """
-    文本嵌入模型
-    
-    使用预训练的Sentence Transformer模型将文本转换为向量
+    Text embedding model
+
+    Use a pretrained Sentence Transformer model to convert text into vectors
     """
     
     def __init__(self, model_name: str = 'sentence-transformers/all-MiniLM-L6-v2'):
         """
-        初始化嵌入模型
+        Initialize the embedding model.
         
         Args:
-            model_name: Sentence Transformer模型名称
-                       默认: 'sentence-transformers/all-MiniLM-L6-v2' (384维)
-                       其他选项:
-                       - 'all-mpnet-base-v2' (768维，更高质量)
-                       - 'paraphrase-multilingual-MiniLM-L12-v2' (384维，支持中文)
+            model_name: Sentence Transformer model name
+                       Default: 'sentence-transformers/all-MiniLM-L6-v2' (384 dimensions)
+                       Other options:
+                       - 'all-mpnet-base-v2' (768 dimensions, higher quality)
+                       - 'paraphrase-multilingual-MiniLM-L12-v2' (384 dimensions, supports Chinese)
         """
-        print(f"📦 加载文本嵌入模型: {model_name}")
+        print(f"📦 Loading text embedding model: {model_name}")
         self.model = SentenceTransformer(model_name)
         self.embedding_dim = self.model.get_sentence_embedding_dimension()
-        print(f"✅ 模型加载完成，嵌入维度: {self.embedding_dim}")
+        print(f"✅ Model loaded, embedding dimension: {self.embedding_dim}")
     
     def encode_text(self, text: Union[str, List[str]], 
                     normalize: bool = False,
                     convert_to_tensor: bool = False) -> Union[np.ndarray, torch.Tensor]:
         """
-        将文本编码为向量
+        Encode text into vectors.
         
         Args:
-            text: 单个文本字符串或文本列表
-            normalize: 是否归一化向量（L2范数）
-            convert_to_tensor: 是否返回PyTorch张量
+            text: A single text string or a list of text strings
+            normalize: Whether to normalize vectors (L2 norm)
+            convert_to_tensor: Whether to return a PyTorch tensor
             
         Returns:
-            嵌入向量，shape: [embedding_dim] 或 [batch_size, embedding_dim]
+            Embedding vectors, shape: [embedding_dim] or [batch_size, embedding_dim]
         """
         embeddings = self.model.encode(
             text,
@@ -60,61 +60,61 @@ class TextEmbeddingModel:
     
     def encode_agents(self, agents: List[dict]) -> torch.Tensor:
         """
-        为智能体列表生成嵌入向量
+        Generate embedding vectors for a list of agents.
         
         Args:
-            agents: 智能体配置列表，每个包含 'name' 和 'system_prompt'
+            agents: Agent configuration list, each containing 'name' and 'system_prompt'
             
         Returns:
-            智能体嵌入张量，shape: [num_agents, embedding_dim]
+            Agent embedding tensor, shape: [num_agents, embedding_dim]
         """
-        # 提取智能体的关键信息：名称 + 系统提示词
+        # Extract key agent information: name + system prompt
         agent_texts = []
         for agent in agents:
             name = agent.get('name', 'UnnamedAgent')
             system_prompt = agent.get('system_prompt', '')
-            # 组合名称和提示词作为完整描述
+            # Combine name and prompt as the full description
             full_description = f"{name}: {system_prompt}"
             agent_texts.append(full_description)
         
-        # 批量编码
+        # Batch encode
         embeddings = self.encode_text(agent_texts, convert_to_tensor=True)
         
         return embeddings
     
     def encode_states(self, states: List[dict]) -> torch.Tensor:
         """
-        为FSM状态列表生成嵌入向量
+        Generate embedding vectors for a list of FSM states.
         
         Args:
-            states: 状态配置列表，每个包含 'name' 和 'action'
+            states: State configuration list, each containing 'name' and 'action'
             
         Returns:
-            状态嵌入张量，shape: [num_states, embedding_dim]
+            State embedding tensor, shape: [num_states, embedding_dim]
         """
-        # 提取状态的关键信息：名称 + 动作描述
+        # Extract key state information: name + action description
         state_texts = []
         for state in states:
             name = state.get('name', 'UnnamedState')
             action = state.get('action', '')
-            # 组合名称和动作作为完整描述
+            # Combine name and action as the full description
             full_description = f"{name}: {action}"
             state_texts.append(full_description)
         
-        # 批量编码
+        # Batch encode
         embeddings = self.encode_text(state_texts, convert_to_tensor=True)
         
         return embeddings
     
     def encode_query(self, query: str) -> torch.Tensor:
         """
-        为任务查询生成嵌入向量
+        Generate an embedding vector for the task query.
         
         Args:
-            query: 任务描述或问题
+            query: Task description or question
             
         Returns:
-            查询嵌入张量，shape: [embedding_dim]
+            Query embedding tensor, shape: [embedding_dim]
         """
         embedding = self.encode_text(query, convert_to_tensor=True)
         return embedding
@@ -123,41 +123,41 @@ class TextEmbeddingModel:
                                     node_features: torch.Tensor,
                                     query: str) -> torch.Tensor:
         """
-        将节点特征与查询嵌入结合（参考GDesigner的construct_new_features）
+        Combine node features with query embeddings (following GDesigner's construct_new_features).
         
         Args:
-            node_features: 节点特征张量，shape: [num_nodes, feature_dim]
-            query: 查询文本
+            node_features: Node feature tensor, shape: [num_nodes, feature_dim]
+            query: Query text
             
         Returns:
-            组合特征张量，shape: [num_nodes, feature_dim + embedding_dim]
+            Combined feature tensor, shape: [num_nodes, feature_dim + embedding_dim]
         """
-        # 编码查询
+        # Encode the query
         query_embedding = self.encode_query(query)
         
-        # 将查询嵌入扩展到所有节点
+        # Expand the query embedding to all nodes
         num_nodes = node_features.size(0)
         query_embedding = query_embedding.unsqueeze(0).repeat(num_nodes, 1)
         
-        # 拼接节点特征和查询嵌入
+        # Concatenate node features and query embedding
         combined_features = torch.cat([node_features, query_embedding], dim=1)
         
         return combined_features
 
 
-# 全局单例实例
+# Global singleton instance
 _embedding_model_instance = None
 
 
 def get_embedding_model(model_name: str = 'sentence-transformers/all-MiniLM-L6-v2') -> TextEmbeddingModel:
     """
-    获取全局嵌入模型实例（单例模式）
+    Get the global embedding model instance (singleton pattern).
     
     Args:
-        model_name: 模型名称
+        model_name: Model name
         
     Returns:
-        TextEmbeddingModel实例
+        TextEmbeddingModel instance
     """
     global _embedding_model_instance
     
@@ -169,22 +169,21 @@ def get_embedding_model(model_name: str = 'sentence-transformers/all-MiniLM-L6-v
 
 def get_sentence_embedding(sentence: str) -> np.ndarray:
     """
-    获取文本嵌入（兼容GDesigner的API）
+    Get text embeddings (compatible with GDesigner API).
     
     Args:
-        sentence: 文本字符串
+        sentence: Text string
         
     Returns:
-        嵌入向量（numpy数组）
+        Embedding vector (NumPy array)
     """
     model = get_embedding_model()
     return model.encode_text(sentence, convert_to_tensor=False)
 
 
-# 导出函数
+# Export functions
 __all__ = [
     'TextEmbeddingModel',
     'get_embedding_model',
     'get_sentence_embedding'
 ]
-
