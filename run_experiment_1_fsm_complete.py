@@ -1,46 +1,4 @@
-"""
-实验1完整版V3：五目标损失优化 (Five-Objective Optimization)
-Experiment 1 Complete V3: Five-Objective Loss with FSM-Aware Optimization
 
-✅ 集成所有新功能：
-1. 一个状态对应一个智能体 (State → Agent Mapping)
-2. 状态转移条件自动匹配 (Transition Condition Matching) ✨
-3. FSM验证和优化 (FSM Validation & Optimization) ✨
-4. 循环避免机制 (Loop Prevention via FSMExecutor) ✨
-5. LLM成本追踪 (LLM Cost Tracking) ✨
-6. FSM状态描述动态优化 (FSM-Aware State Description Optimization) ✨
-7. 最大转移次数惩罚 (Max Transitions Penalty) ✨
-
-🎯 五目标组合损失 (Five-Objective Combined Loss)：
-   L_total = α·L_policy + β·L_transition + γ·L_listener + δ·L_cost + ζ·L_max_transitions
-   
-   目标1: α·L_policy (策略梯度损失, α=1.0)
-          - 优化端到端任务准确率
-          - 通过强化学习优化状态转移策略
-   
-   目标2: β·L_transition (状态转移损失, β=0.3)
-          - 学习最优状态转移序列
-          - 鼓励TGN预测高概率给实际转移的状态
-   
-   目标3: γ·L_listener (监听路径损失, γ=0.2)
-          - 优化智能体间通信路径
-          - 学习最优监听关系
-   
-   目标4: δ·L_cost (LLM成本损失, δ集成在四目标框架中)
-          - 最小化LLM API调用成本
-          - 鼓励高效的推理路径
-   
-   目标5: ζ·L_max_transitions (最大转移惩罚, ζ=0.5)
-          - 惩罚达到最大转移次数的执行
-          - 鼓励更短、更高效的状态转移路径
-
-🆚 版本对比：
-- V1: 策略梯度 + MSE重构 (间接优化)
-- V2: 策略梯度 + 状态转移 + 监听路径 (三目标)
-- V3: V2 + LLM成本 + 最大转移惩罚 (五目标) ✨ LATEST
-
-
-"""
 
 import asyncio
 import sys
@@ -49,7 +7,7 @@ import json
 import os
 from pathlib import Path
 
-# 添加路径
+# Add path
 current_dir = Path(__file__).parent
 sys.path.insert(0, str(current_dir))
 
@@ -58,301 +16,301 @@ from neural_fsm_mas.core_integration import (
     EnhancedFSMIntegration,
     create_enhanced_integration,
     StateAgentCorrespondenceLearner
-)  # ✨ 导入核心集成模块
-from neural_fsm_mas.fsm_cache_manager import create_cache_manager  # ✨ FSM缓存
-from baseclass.Enhanced_FSM_Gen import EnhancedFSMGenerator  # ✨ FSM生成器
+)  # ✨ Import core integration modules
+from neural_fsm_mas.fsm_cache_manager import create_cache_manager  # ✨ FSM cache
+from baseclass.Enhanced_FSM_Gen import EnhancedFSMGenerator  # ✨ FSM generator
 
 
 def parse_arguments():
-    """解析命令行参数"""
+    """Parse command-line arguments."""
     parser = argparse.ArgumentParser(
-        description='实验1完整版V2：新FSM架构 + 三目标优化'
+        description='Experiment 1 Complete V2: new FSM architecture + three-objective optimization'
     )
     
-    # 基本参数
+    # Basic arguments
     parser.add_argument('--domains', type=str, nargs='+',
                        default=['gsm8k'],
-                       help='训练领域 (mmlu, gsm8k, gpqa, gaia, humaneval, hotpotqa, alfworld, math)')
+                       help='Training domains (mmlu, gsm8k, gpqa, gaia, humaneval, hotpotqa, alfworld, math)')
     parser.add_argument('--dataset_root', type=str, default='./datasets',
-                       help='数据集根目录')
+                       help='Dataset root directory')
     parser.add_argument('--output_dir', type=str, 
                        default='./results/experiment1_fsm_v2',
-                       help='输出目录')
+                       help='Output directory')
     
-    # 训练参数
+    # Training arguments
     parser.add_argument('--num_epochs', type=int, default=50,
-                       help='训练轮数')
+                       help='Number of training epochs')
     parser.add_argument('--batch_size', type=int, default=16,
-                       help='批次大小')
+                       help='Batch size')
     parser.add_argument('--learning_rate', type=float, default=0.001,
-                       help='学习率')
+                       help='Learning rate')
     
-    # 四目标组合损失权重 ✨ 新增delta
+    # Four-objective combined loss weights ✨ Added delta
     parser.add_argument('--policy_gradient_weight', type=float, default=1.0,
-                       help='策略梯度损失权重 (α)')
+                       help='Policy gradient loss weight (α)')
     parser.add_argument('--transition_loss_weight', type=float, default=0.3,
-                       help='状态转移损失权重 (β)')
+                       help='State transition loss weight (β)')
     parser.add_argument('--listener_loss_weight', type=float, default=0.2,
-                       help='监听路径损失权重 (γ)')
+                       help='Listener path loss weight (γ)')
     parser.add_argument('--cost_loss_weight', type=float, default=0.001,
-                       help='LLM成本损失权重 (δ) ✨ NEW')
+                       help='LLM cost loss weight (δ) ✨ NEW')
     
-    # FSM验证和执行参数 ✨ 新增
+    # FSM validation and execution arguments ✨ Added
     parser.add_argument('--max_visits_per_state', type=int, default=3,
-                       help='每个状态最大访问次数（循环避免）')
+                       help='Maximum visits per state (loop prevention)')
     parser.add_argument('--max_total_steps', type=int, default=20,
-                       help='每个episode最大总步数')
+                       help='Maximum total steps per episode')
     parser.add_argument('--max_transitions', type=int, default=8,
-                       help='最大状态转移次数（每个问题的最大状态转移步数）')
+                       help='Maximum number of state transitions (maximum transition steps per question)')
     parser.add_argument('--auto_fix_fsm', action='store_true', default=True,
-                       help='自动修复FSM问题（添加救援转移等）')
+                       help='Automatically fix FSM issues (such as adding rescue transitions)')
     parser.add_argument('--use_llm_for_conditions', action='store_true', default=False,
-                       help='使用LLM生成缺失的转移条件')
+                       help='Use LLM to generate missing transition conditions')
     
-    # TGN参数
+    # TGN arguments
     parser.add_argument('--memory_dim', type=int, default=128,
-                       help='TGN记忆维度')
+                       help='TGN memory dimension')
     parser.add_argument('--time_dim', type=int, default=32,
-                       help='时间编码维度')
+                       help='Time encoding dimension')
     parser.add_argument('--agent_embedding_dim', type=int, default=256,
-                       help='智能体嵌入维度')
+                       help='Agent embedding dimension')
     parser.add_argument('--state_feature_dim', type=int, default=256,
-                       help='状态特征维度')
+                       help='State feature dimension')
     
-    # LLM参数
+    # LLM arguments
     parser.add_argument('--llm_name', type=str, default='gpt-5-nano',
-                       help='LLM模型名称')
+                       help='LLM model name')
     
-    # FSM缓存参数 ✨ 新增
+    # FSM cache arguments ✨ Added
     parser.add_argument('--fsm_cache_dir', type=str, default='./fsm_cache',
-                       help='FSM缓存目录')
-    # FSM缓存默认启用，使用 --no-use-fsm-cache 可以关闭
+                       help='FSM cache directory')
+    # FSM cache is enabled by default; use --no-use-fsm-cache to disable it
     parser.add_argument('--no-use-fsm-cache', dest='use_fsm_cache', action='store_false',
-                       help='禁用FSM缓存（强制重新生成，默认是启用缓存的）')
+                       help='Disable FSM cache (force regeneration; cache is enabled by default)')
     parser.add_argument('--force_regenerate_fsm', action='store_true', default=False,
-                       help='每次运行强制重新生成FSM（忽略已有缓存）')
+                       help='Force FSM regeneration on every run (ignore existing cache)')
     parser.add_argument('--generate_fsm_if_missing', action='store_true', default=True,
-                       help='如果缓存不存在，自动生成FSM')
+                       help='Automatically generate FSM if cache is missing')
     parser.add_argument('--mmlu_use_category_fsm', action='store_true', default=False,
-                       help='MMLU使用类别级FSM（每个类别一套FSM），默认False使用统一FSM')
+                       help='Use category-level FSM for MMLU (one FSM per category); default False uses a unified FSM')
     
-    # ✨ 状态描述优化参数（新增）
+    # ✨ State description optimization arguments (new)
     parser.add_argument('--enable_prompt_optimization', action='store_true', default=False,
-                       help='启用状态描述动态优化（根据执行情况增强状态描述）')
+                       help='Enable dynamic state description optimization (enhance descriptions based on execution performance)')
     parser.add_argument('--max_transitions_threshold', type=int, default=3,
-                       help='达到最大转移次数N次后触发效率优化（默认3）')
+                       help='Trigger efficiency optimization after reaching the maximum transition count N times (default: 3)')
     parser.add_argument('--accuracy_enhancement_threshold', type=int, default=5,
-                       help='失败N次后触发准确率优化（默认5）')
+                       help='Trigger accuracy optimization after N failures (default: 5)')
     parser.add_argument('--efficiency_enhancement_threshold', type=int, default=3,
-                       help='低效执行N次后触发效率优化（默认3）')
+                       help='Trigger efficiency optimization after N inefficient executions (default: 3)')
     
-    # ✨ 训练数据采样参数（新增）
+    # ✨ Training data sampling arguments (new)
     parser.add_argument('--train_samples', type=int, default=None,
-                       help='从训练集中随机采样的样本数（例如100），不指定则使用全部')
+                       help='Number of samples randomly drawn from the training set (e.g. 100); use all samples if omitted')
     parser.add_argument('--train_only', action='store_true', default=False,
-                       help='只进行训练，跳过验证和测试阶段')
+                       help='Train only, skipping validation and testing')
     parser.add_argument('--full_train_data', action='store_true', default=False,
-                       help='不划分验证/测试集：使用 100% 数据作为训练集（train_ratio=1,val_ratio=0,test_ratio=0）')
+                       help='Do not split validation/test sets: use 100% of the data for training (train_ratio=1,val_ratio=0,test_ratio=0)')
 
-    # ✨ GAIA：按难度 level 过滤（1/2/3）；不指定则合并全部 level
+    # ✨ GAIA: filter by difficulty level (1/2/3); merge all levels if unspecified
     parser.add_argument('--gaia_level', type=int, default=None,
-                       help='GAIA难度等级（1/2/3）。仅在 domains 包含 gaia 时生效')
+                       help='GAIA difficulty level (1/2/3). Only takes effect when domains includes gaia')
 
-    # ✨ 实验1消融开关（GSM8K/MATH等）
+    # ✨ Experiment 1 ablation switches (GSM8K/MATH etc.)
     parser.add_argument('--disable_transition_prediction', action='store_true', default=False,
-                       help='消融：禁用TGN状态转移预测（不使用transition_probs采样下一状态）')
+                       help='Ablation: disable TGN state transition prediction (do not sample the next state with transition_probs)')
     parser.add_argument('--disable_comm_sampling', action='store_true', default=False,
-                       help='消融：禁用通信路径采样（不使用listener_weights采样监听者）')
+                       help='Ablation: disable communication path sampling (do not sample listeners with listener_weights)')
     parser.add_argument('--ablation', action='store_true', default=False,
-                       help='消融实验模式：输出目录自动写入 ablation/<variant>/ 子目录，避免覆盖正常实验1结果')
+                       help='Ablation mode: automatically write outputs to ablation/<variant>/ subdirectories to avoid overwriting regular Experiment 1 results')
     
     return parser.parse_args()
 
 
 async def main():
-    """主函数"""
+    """Main function."""
     args = parse_arguments()
     
-    # 将命令行指定的LLM名称写入环境变量，供所有LLM客户端统一使用
+    # Write the CLI-specified LLM name to an environment variable for all LLM clients
     if args.llm_name:
         os.environ["NEURALFSM_LLM_MODEL"] = args.llm_name
     
     print("="*80)
-    print("🚀 实验1完整版V3：四目标优化 + 全功能集成")
+    print("🚀 Experiment 1 Complete V3: four-objective optimization + full feature integration")
     print("="*80)
-    print("\n✨ 新功能（V3）:")
-    print("  1. ✅ 四目标组合损失（策略梯度 + 状态转移 + 监听路径 + LLM成本）")
-    print("  2. ✅ FSM验证和自动优化（可达性检查 + 救援转移）")
-    print("  3. ✅ 转移条件自动匹配（执行时动态匹配条件）")
-    print("  4. ✅ 循环避免机制（访问次数限制 + 步数限制）")
-    print("  5. ✅ LLM成本实时追踪（12+模型价格清单）")
-    print("\n📋 核心功能:")
-    print("  • 一个状态对应一个智能体")
-    print("  • TGN学习最优状态转移和通信路径")
-    print("  • 支持所有数据集（MMLU、GSM8K、HumanEval、HotpotQA、ALFWorld、MATH、MBPP）✨")
-    print("\n🆚 版本对比:")
-    print("  • V1: α*策略梯度 + β*MSE重构 (间接优化)")
-    print("  • V2: α*策略梯度 + β*状态转移 + γ*监听路径 (三目标)")
-    print("  • V3: V2 + δ*LLM成本 + FSM验证 + 转移匹配 (四目标) ✨")
-    print("\n📊 配置:")
-    print(f"  • 训练领域: {args.domains}")
-    print(f"  • 训练轮数: {args.num_epochs}")
-    print(f"  • 批次大小: {args.batch_size}")
-    print(f"  • 学习率: {args.learning_rate}")
-    print(f"\n🎯 五目标损失权重 (Five-Objective Loss):")
+    print("\n✨ New features (V3):")
+    print("  1. ✅ Four-objective combined loss (policy gradient + state transition + listener path + LLM cost)")
+    print("  2. ✅ FSM validation and automatic optimization (reachability checks + rescue transitions)")
+    print("  3. ✅ Automatic transition condition matching (dynamically matched during execution)")
+    print("  4. ✅ Loop prevention mechanism (visit limits + step limits)")
+    print("  5. ✅ Real-time LLM cost tracking (12+ model pricing entries)")
+    print("\n📋 Core features:")
+    print("  • One state corresponds to one agent")
+    print("  • TGN learns optimal state transitions and communication paths")
+    print("  • Supports all datasets (MMLU, GSM8K, HumanEval, HotpotQA, ALFWorld, MATH, MBPP) ✨")
+    print("\n🆚 Version comparison:")
+    print("  • V1: α*policy gradient + β*MSE reconstruction (indirect optimization)")
+    print("  • V2: α*policy gradient + β*state transition + γ*listener path (three objectives)")
+    print("  • V3: V2 + δ*LLM cost + FSM validation + transition matching (four objectives) ✨")
+    print("\n📊 Configuration:")
+    print(f"  • Training domains: {args.domains}")
+    print(f"  • Epochs: {args.num_epochs}")
+    print(f"  • Batch size: {args.batch_size}")
+    print(f"  • Learning rate: {args.learning_rate}")
+    print(f"\n🎯 Five-objective loss weights:")
     print(f"  L_total = α·L_policy + β·L_transition + γ·L_listener + δ·L_cost + ζ·L_max_transitions")
-    print(f"  • 目标1 - 策略梯度 (α): {args.policy_gradient_weight}")
-    print(f"  • 目标2 - 状态转移 (β): {args.transition_loss_weight}")
-    print(f"  • 目标3 - 监听路径 (γ): {args.listener_loss_weight}")
-    print(f"  • 目标4 - LLM成本   (δ): {args.cost_loss_weight}")
-    print(f"  • 目标5 - 最大转移惩罚 (ζ): 0.5 (默认)")
-    print(f"\n🛡️  FSM执行配置:")
-    print(f"  • 每状态最大访问次数: {args.max_visits_per_state}")
-    print(f"  • Episode最大步数: {args.max_total_steps}")
-    print(f"  • 最大状态转移次数: {args.max_transitions}")
-    print(f"  • 自动修复FSM: {args.auto_fix_fsm}")
-    print(f"\n✨ 状态描述优化配置:")
-    print(f"  • 启用优化: {args.enable_prompt_optimization}")
+    print(f"  • Objective 1 - Policy gradient (α): {args.policy_gradient_weight}")
+    print(f"  • Objective 2 - State transition (β): {args.transition_loss_weight}")
+    print(f"  • Objective 3 - Listener path (γ): {args.listener_loss_weight}")
+    print(f"  • Objective 4 - LLM cost   (δ): {args.cost_loss_weight}")
+    print(f"  • Objective 5 - Max transition penalty (ζ): 0.5 (default)")
+    print(f"\n🛡️  FSM execution configuration:")
+    print(f"  • Max visits per state: {args.max_visits_per_state}")
+    print(f"  • Max episode steps: {args.max_total_steps}")
+    print(f"  • Max state transitions: {args.max_transitions}")
+    print(f"  • Auto-fix FSM: {args.auto_fix_fsm}")
+    print(f"\n✨ State description optimization configuration:")
+    print(f"  • Optimization enabled: {args.enable_prompt_optimization}")
     if args.enable_prompt_optimization:
-        print(f"  • 准确率优化: 失败 {args.accuracy_enhancement_threshold} 次后触发")
-        print(f"  • 效率优化: 达到最大转移 {args.max_transitions_threshold} 次后触发")
-    print(f"\n🤖 模型配置:")
-    print(f"  • LLM模型: {args.llm_name}")
-    print(f"  • 记忆维度: {args.memory_dim}")
-    print(f"  • 时间编码维度: {args.time_dim}")
-    print(f"  • 智能体嵌入维度: {args.agent_embedding_dim}")
-    print(f"  • 状态特征维度: {args.state_feature_dim}")
+        print(f"  • Accuracy optimization: triggered after {args.accuracy_enhancement_threshold} failures")
+        print(f"  • Efficiency optimization: triggered after reaching the max transitions {args.max_transitions_threshold} times")
+    print(f"\n🤖 Model configuration:")
+    print(f"  • LLM model: {args.llm_name}")
+    print(f"  • Memory dimension: {args.memory_dim}")
+    print(f"  • Time encoding dimension: {args.time_dim}")
+    print(f"  • Agent embedding dimension: {args.agent_embedding_dim}")
+    print(f"  • State feature dimension: {args.state_feature_dim}")
     
-    # ✨ 训练数据采样配置
+    # ✨ Training data sampling configuration
     if args.train_samples or args.train_only or args.full_train_data:
-        print(f"\n📋 数据采样配置:")
+        print(f"\n📋 Data sampling configuration:")
         if args.train_samples:
-            print(f"  • 训练样本数: {args.train_samples}（随机采样）")
+            print(f"  • Training samples: {args.train_samples} (randomly sampled)")
         if args.train_only:
-            print(f"  • 模式: 只训练（跳过验证和测试）")
+            print(f"  • Mode: train only (skip validation and testing)")
         if args.full_train_data:
-            print(f"  • 划分: 100% 数据用于训练（不划分验证/测试）")
+            print(f"  • Split: 100% of data used for training (no validation/test split)")
     print("="*80 + "\n")
     
-    # 构建配置（V3版本：添加新参数）
+    # Build configuration (V3: with new arguments)
     config = {
-        # 基础训练参数
+        # Basic training arguments
         'num_epochs': args.num_epochs,
         'batch_size': args.batch_size,
         'learning_rate': args.learning_rate,
         
-        # 四目标损失权重 ✨
+        # Four-objective loss weights ✨
         'alpha': args.policy_gradient_weight,
         'beta': args.transition_loss_weight,
         'gamma': args.listener_loss_weight,
-        'delta': args.cost_loss_weight,  # ✨ NEW: LLM成本权重
+        'delta': args.cost_loss_weight,  # ✨ NEW: LLM cost weight
         'policy_gradient_weight': args.policy_gradient_weight,
         'transition_loss_weight': args.transition_loss_weight,
         'listener_loss_weight': args.listener_loss_weight,
         'cost_loss_weight': args.cost_loss_weight,  # ✨ NEW
         
-        # FSM验证和执行参数 ✨
+        # FSM validation and execution arguments ✨
         'max_visits_per_state': args.max_visits_per_state,
         'max_total_steps': args.max_total_steps,
         'max_transitions': args.max_transitions,
         'auto_fix_fsm': args.auto_fix_fsm,
         'use_llm_for_conditions': args.use_llm_for_conditions,
         
-        # TGN参数
+        # TGN arguments
         'memory_dim': args.memory_dim,
         'time_dim': args.time_dim,
         'llm_name': args.llm_name,
-        'model_name': args.llm_name,  # ✨ 用于成本追踪和日志
+        'model_name': args.llm_name,  # ✨ Used for cost tracking and logs
         'agent_embedding_dim': args.agent_embedding_dim,
         'state_feature_dim': args.state_feature_dim,
         
-        # 数据集参数
+        # Dataset arguments
         'train_ratio': 0.7,
         'val_ratio': 0.15,
         'test_ratio': 0.15,
         'random_seed': 42,
         
-        # FSM缓存参数 ✨
+        # FSM cache arguments ✨
         'fsm_cache_dir': args.fsm_cache_dir,
         'use_fsm_cache': args.use_fsm_cache if hasattr(args, 'use_fsm_cache') and args.use_fsm_cache is not None else True,
         'force_regenerate_fsm': args.force_regenerate_fsm,
         'generate_fsm_if_missing': args.generate_fsm_if_missing,
         'mmlu_use_category_fsm': args.mmlu_use_category_fsm,
         
-        # ✨ 状态描述优化配置（新增）
+        # ✨ State description optimization configuration (new)
         'enable_prompt_optimization': args.enable_prompt_optimization,
         'max_transitions_threshold': args.max_transitions_threshold,
         'accuracy_enhancement_threshold': args.accuracy_enhancement_threshold,
         'efficiency_enhancement_threshold': args.efficiency_enhancement_threshold,
         
-        # ✨ 训练数据采样配置（新增）
+        # ✨ Training data sampling configuration (new)
         'train_samples': args.train_samples,
         'train_only': args.train_only,
         'full_train_data': args.full_train_data,
         'gaia_level': args.gaia_level,
 
-        # ✨ 消融开关
+        # ✨ Ablation switches
         'enable_transition_prediction': (not args.disable_transition_prediction),
         'enable_comm_sampling': (not args.disable_comm_sampling),
         'ablation': bool(args.ablation),
         
-        # 成本估算参数 ✨
+        # Cost estimation arguments ✨
         'avg_input_tokens': 500,
         'avg_output_tokens': 200,
         'avg_calls_per_episode': 5
     }
 
-    # ✨ 使用 100% 数据训练：覆盖默认划分比例，并避免与 train_samples 冲突
+    # ✨ Use 100% of the data for training: override the default split ratio and avoid conflicts with train_samples
     if args.full_train_data:
         config['train_ratio'] = 1.0
         config['val_ratio'] = 0.0
         config['test_ratio'] = 0.0
         if args.train_samples:
-            # 用户要求 100% 数据训练时，随机采样会违背该目标，直接忽略
+            # Ignore random sampling when the user explicitly requests training on 100% of the data
             config['train_samples'] = None
-            print("  ⚠️  已启用 --full_train_data，忽略 --train_samples（将使用全部样本训练）")
+            print("  ⚠️  --full_train_data is enabled, so --train_samples will be ignored (all samples will be used for training)")
     
-    # ✨ 初始化FSM缓存管理器（新增）
-    print("\n📦 初始化FSM缓存管理器...")
+    # ✨ Initialize the FSM cache manager (new)
+    print("\n📦 Initializing FSM cache manager...")
     cache_manager = create_cache_manager(args.fsm_cache_dir)
     
-    # ✨ 为每个数据集准备FSM（新增）
-    print("\n🏗️  准备FSM配置...")
+    # ✨ Prepare FSMs for each dataset (new)
+    print("\n🏗️  Preparing FSM configuration...")
     fsm_generator = EnhancedFSMGenerator(use_azure=False)
     
     for domain in args.domains:
-        print(f"\n  📋 检查 {domain.upper()} 的FSM...")
+        print(f"\n  📋 Checking FSM for {domain.upper()}...")
         
         if domain == 'mmlu' and args.mmlu_use_category_fsm:
-            # MMLU特殊处理：需要为每个类别生成FSM
-            print(f"    ℹ️  MMLU使用类别级FSM")
+            # Special handling for MMLU: generate one FSM per category
+            print(f"    ℹ️  MMLU is using category-level FSMs")
             
-            # ✨ 检查并生成缺失的类别FSM
+            # ✨ Check and generate missing category FSMs
             if args.generate_fsm_if_missing:
-                print(f"    🔍 检查MMLU类别FSM缓存...")
+                print(f"    🔍 Checking MMLU category FSM cache...")
                 from neural_fsm_mas.training_data.unified_data_processor import UnifiedDataProcessor
                 data_processor = UnifiedDataProcessor(args.dataset_root)
                 mmlu_data = data_processor.load_dataset('mmlu', split='test')
                 
-                # 获取所有唯一的类别（从所有数据中获取，确保覆盖所有类别）
-                # MMLU数据使用'subject'字段表示类别
+                # Collect all unique categories from the full dataset to ensure complete coverage
+                # MMLU uses the 'subject' field to represent categories
                 categories = set()
                 for item in mmlu_data:
-                    cat = item.get('subject', '')  # MMLU使用subject字段
+                    cat = item.get('subject', '')  # MMLU uses the subject field
                     if cat:
                         categories.add(cat)
                 
-                print(f"    📊 发现 {len(categories)} 个类别需要FSM")
+                print(f"    📊 Found {len(categories)} categories that require FSMs")
                 
                 generated_count = 0
                 cached_count = 0
-                # ✨ 检查是否启用缓存
+                # ✨ Check whether caching is enabled
                 use_cache = getattr(args, 'use_fsm_cache', True)
                 for category in sorted(categories):
                     if use_cache and cache_manager.has_cache('mmlu', category):
                         cached_count += 1
                     elif args.generate_fsm_if_missing:
-                        print(f"      🔨 生成类别 '{category}' 的FSM...")
+                        print(f"      🔨 Generating FSM for category '{category}'...")
                         try:
                             mas_config, cost = fsm_generator.generate_complete_mas(
                                 dataset='mmlu',
@@ -367,58 +325,58 @@ async def main():
                                 metadata={'generation_cost': cost, 'category': category}
                             )
                             generated_count += 1
-                            print(f"        ✅ 完成 (成本: ${cost:.4f} USD)")
+                            print(f"        ✅ Done (cost: ${cost:.4f} USD)")
                         except Exception as e:
-                            print(f"        ⚠️  生成失败: {e}")
-                            print(f"        将在训练时使用默认FSM")
+                            print(f"        ⚠️  Generation failed: {e}")
+                            print(f"        The default FSM will be used during training")
                 
-                print(f"    📊 统计: {cached_count} 个已缓存, {generated_count} 个新生成")
+                print(f"    📊 Summary: {cached_count} cached, {generated_count} newly generated")
                 if generated_count == 0 and cached_count == 0:
-                    print(f"    ⚠️  未找到任何类别FSM，训练时将使用默认FSM")
+                    print(f"    ⚠️  No category FSMs were found; the default FSM will be used during training")
             else:
-                print(f"    ℹ️  自动生成已禁用，将在训练时按需加载或使用默认FSM")
+                print(f"    ℹ️  Auto-generation is disabled; FSMs will be loaded on demand during training or fall back to the default FSM")
         else:
-            # 其他数据集：检查或生成FSM
-            # ✨ 先检查是否启用缓存
+            # Other datasets: check or generate FSM
+            # ✨ Check first whether caching is enabled
             use_cache = getattr(args, 'use_fsm_cache', True)
             if use_cache and cache_manager.has_cache(domain):
-                print(f"    ✅ 找到缓存FSM")
+                print(f"    ✅ Cached FSM found")
                 cached = cache_manager.load_fsm(domain)
-                print(f"      - 状态数: {cached['metadata']['num_states']}")
-                print(f"      - 智能体数: {cached['metadata']['num_agents']}")
+                print(f"      - Number of states: {cached['metadata']['num_states']}")
+                print(f"      - Number of agents: {cached['metadata']['num_agents']}")
             elif args.generate_fsm_if_missing:
-                print(f"    🔨 生成新FSM...")
+                print(f"    🔨 Generating a new FSM...")
                 try:
                     mas_config, cost = fsm_generator.generate_complete_mas(
                         dataset=domain,
-                        save_path=None  # 不保存到文件，只返回配置
+                        save_path=None  # Do not save to a file; just return the configuration
                     )
-                    # 保存到缓存
+                    # Save to cache
                     cache_manager.save_fsm(
                         dataset=domain,
                         fsm_config=mas_config.get('fsm', {}),
                         agents=mas_config.get('agents', []),
                         metadata={'generation_cost': cost}
                     )
-                    print(f"    ✅ FSM生成完成 (成本: ${cost:.4f} USD)")
+                    print(f"    ✅ FSM generation complete (cost: ${cost:.4f} USD)")
                 except Exception as e:
-                    print(f"    ⚠️  FSM生成失败: {e}")
-                    print(f"    将在训练时使用默认配置")
+                    print(f"    ⚠️  FSM generation failed: {e}")
+                    print(f"    The default configuration will be used during training")
             else:
-                print(f"    ⚠️  未找到缓存且未启用自动生成，将使用默认配置")
+                print(f"    ⚠️  No cache was found and auto-generation is disabled; the default configuration will be used")
     
-    # ✨ 创建核心集成模块（新增）
-    print("\n🔧 初始化核心集成模块...")
+    # ✨ Create the core integration module (new)
+    print("\n🔧 Initializing core integration module...")
     integration = create_enhanced_integration(config)
     
-    # 创建训练器（按 llm_name 拆分输出目录）
-    # ✨ 输出目录结构：
+    # Create trainer (split output directories by llm_name)
+    # ✨ Output directory structure:
     #    - GAIA: output_dir/level{N}/{llm_name}/
-    #    - 消融实验: output_dir/ablation/{variant}/{llm_name}/
-    #    - 正常实验: output_dir/{llm_name}/
+    #    - Ablation experiments: output_dir/ablation/{variant}/{llm_name}/
+    #    - Regular experiments: output_dir/{llm_name}/
     base_output = Path(args.output_dir)
     
-    # ✨ GAIA level 区分（如果指定了 --gaia_level）
+    # ✨ Distinguish GAIA levels (if --gaia_level is specified)
     if 'gaia' in args.domains and args.gaia_level is not None:
         base_output = base_output / f"level{args.gaia_level}"
     
@@ -428,10 +386,10 @@ async def main():
             variant_parts.append("no_trans")
         if args.disable_comm_sampling:
             variant_parts.append("no_comm")
-        # “去掉提示优化”即 enable_prompt_optimization=False
+        # "Remove prompt optimization" means enable_prompt_optimization=False
         if not args.enable_prompt_optimization:
             variant_parts.append("no_promptopt")
-        # Full ablation baseline: 开启提示优化且无其它禁用项
+        # Full ablation baseline: prompt optimization enabled and no other features disabled
         if not variant_parts and args.enable_prompt_optimization:
             variant = "full"
         else:
@@ -439,48 +397,48 @@ async def main():
         base_output = base_output / "ablation" / variant
 
     llm_specific_output = base_output / args.llm_name
-    print("🔧 初始化FSM训练器...")
+    print("🔧 Initializing FSM trainer...")
     trainer = FSMMultiAgentSystemTrainerV2(
         config=config,
         dataset_root=args.dataset_root,
         output_dir=llm_specific_output
     )
     
-    # ✨ 注入FSM缓存管理器（新增）
+    # ✨ Inject the FSM cache manager (new)
     trainer.fsm_cache_manager = cache_manager
     trainer.fsm_generator = fsm_generator
     
-    # ✨ 将集成模块注入训练器（新增）
-    print("🔗 集成四目标损失和FSM验证功能...")
+    # ✨ Inject the integration module into the trainer (new)
+    print("🔗 Integrating the four-objective loss and FSM validation features...")
     integration.integrate_with_trainer(trainer)
     
     try:
-        # 训练所有领域
-        print(f"\n🎯 开始训练领域: {args.domains}")
+        # Train all domains
+        print(f"\n🎯 Starting training for domains: {args.domains}")
         print("="*80)
         results = await trainer.train_all_domains(args.domains)
         
-        # 打印详细结果
+        # Print detailed results
         print("\n" + "="*80)
-        print("📊 训练结果摘要")
+        print("📊 Training summary")
         print("="*80)
         
         for domain, result in results.items():
-            print(f"\n🔸 领域: {domain}")
-            print(f"  • 最佳准确率: {result['best_accuracy']:.4f} (Epoch {result['best_epoch']})")
-            print(f"  • 最终训练准确率: {result['epoch_accuracies'][-1]:.4f}" if result['epoch_accuracies'] else "  • 最终训练准确率: N/A")
-            print(f"  • 最终验证准确率: {result['validation_accuracies'][-1]:.4f}" if result['validation_accuracies'] else "  • 最终验证准确率: N/A")
+            print(f"\n🔸 Domain: {domain}")
+            print(f"  • Best accuracy: {result['best_accuracy']:.4f} (Epoch {result['best_epoch']})")
+            print(f"  • Final training accuracy: {result['epoch_accuracies'][-1]:.4f}" if result['epoch_accuracies'] else "  • Final training accuracy: N/A")
+            print(f"  • Final validation accuracy: {result['validation_accuracies'][-1]:.4f}" if result['validation_accuracies'] else "  • Final validation accuracy: N/A")
             
             if result['epoch_losses']:
-                print(f"  • 最终总损失: {result['epoch_losses'][-1]:.4f}")
-                print(f"    ├─ 策略梯度损失: {result['epoch_policy_losses'][-1]:.4f}")
-                print(f"    ├─ 状态转移损失: {result['epoch_transition_losses'][-1]:.4f}")
-                print(f"    ├─ 监听路径损失: {result['epoch_listener_losses'][-1]:.4f}")
-                # ✨ 新增：显示LLM成本损失
+                print(f"  • Final total loss: {result['epoch_losses'][-1]:.4f}")
+                print(f"    ├─ Policy gradient loss: {result['epoch_policy_losses'][-1]:.4f}")
+                print(f"    ├─ State transition loss: {result['epoch_transition_losses'][-1]:.4f}")
+                print(f"    ├─ Listener path loss: {result['epoch_listener_losses'][-1]:.4f}")
+                # ✨ New: show LLM cost loss
                 if 'epoch_cost_losses' in result and result['epoch_cost_losses']:
-                    print(f"    └─ LLM成本损失: {result['epoch_cost_losses'][-1]:.4f} ✨")
+                    print(f"    └─ LLM cost loss: {result['epoch_cost_losses'][-1]:.4f} ✨")
         
-        # 保存总结
+        # Save summary
         summary = {
             'config': config,
             'domains': args.domains,
@@ -492,7 +450,7 @@ async def main():
         summary_path = llm_specific_output / "experiment_summary.json"
         summary_path.parent.mkdir(parents=True, exist_ok=True)
         
-        # 转换为可序列化格式
+        # Convert to a serializable format
         def make_serializable(obj):
             if isinstance(obj, dict):
                 return {k: make_serializable(v) for k, v in obj.items()}
@@ -506,71 +464,70 @@ async def main():
         with open(summary_path, 'w', encoding='utf-8') as f:
             json.dump(make_serializable(summary), f, indent=2, ensure_ascii=False)
         
-        # ✨ 输出状态描述优化摘要（新增）
+        # ✨ Output the state description optimization summary (new)
         if args.enable_prompt_optimization:
             print("\n" + "="*80)
-            print("✨ 状态描述优化摘要")
+            print("✨ State description optimization summary")
             print("="*80)
             for domain in args.domains:
                 if hasattr(trainer, 'prompt_optimizers') and domain in trainer.prompt_optimizers:
                     optimizer = trainer.prompt_optimizers[domain]
                     summary = optimizer.get_performance_summary()
                     print(f"\n📊 {domain.upper()}:")
-                    print(f"  • 总问题数: {summary['total_questions']}")
-                    print(f"  • 整体准确率: {summary['overall_accuracy']:.2%}")
-                    print(f"  • 达到最大转移: {summary['max_transitions_count']}次 ({summary['max_transitions_rate']:.1%})")
-                    print(f"  • 被增强状态数: {summary['enhanced_states']} / {summary['total_states_tracked']}")
+                    print(f"  • Total questions: {summary['total_questions']}")
+                    print(f"  • Overall accuracy: {summary['overall_accuracy']:.2%}")
+                    print(f"  • Reached max transitions: {summary['max_transitions_count']} times ({summary['max_transitions_rate']:.1%})")
+                    print(f"  • Enhanced states: {summary['enhanced_states']} / {summary['total_states_tracked']}")
                     if summary['problem_states']:
-                        print(f"\n  ⚠️  问题状态（按严重程度排序）:")
-                        for state in summary['problem_states'][:5]:  # 只显示前5个
+                        print(f"\n  ⚠️  Problem states (sorted by severity):")
+                        for state in summary['problem_states'][:5]:  # Show only the top 5
                             enhanced_mark = ""
                             if state['is_enhanced']:
                                 if state['enhancement_type'] == 'accuracy':
-                                    enhanced_mark = "✅ 已增强(准确率)"
+                                    enhanced_mark = "✅ Enhanced (accuracy)"
                                 elif state['enhancement_type'] == 'efficiency':
-                                    enhanced_mark = "⚡ 已增强(效率)"
+                                    enhanced_mark = "⚡ Enhanced (efficiency)"
                                 elif state['enhancement_type'] == 'combined':
-                                    enhanced_mark = "🔥 已增强(准确率+效率)"
+                                    enhanced_mark = "🔥 Enhanced (accuracy + efficiency)"
                             else:
-                                enhanced_mark = "⏳ 待观察"
+                                enhanced_mark = "⏳ Under observation"
                             print(f"    • {state['state_name']}:")
-                            print(f"        失败率: {state['failure_rate']:.1%} ({state['failure_count']}次)")
-                            print(f"        低效率: {state['inefficiency_rate']:.1%} ({state['max_trans_count']}次)")
-                            print(f"        状态: {enhanced_mark}")
+                            print(f"        Failure rate: {state['failure_rate']:.1%} ({state['failure_count']} times)")
+                            print(f"        Inefficiency rate: {state['inefficiency_rate']:.1%} ({state['max_trans_count']} times)")
+                            print(f"        Status: {enhanced_mark}")
         
-        # ✨ 打印成本统计（修复：使用trainer的cost_tracker，而不是integration的）
-        # 因为trainer.cost_tracker是全局追踪器，实际记录了LLM调用成本
+        # ✨ Print cost statistics (fixed: use trainer.cost_tracker instead of integration.cost_tracker)
+        # trainer.cost_tracker is the global tracker that actually records LLM call costs
         if hasattr(trainer, 'cost_tracker') and trainer.cost_tracker is not None:
             print("\n" + "="*80)
-            print("💰 LLM成本统计")
+            print("💰 LLM cost statistics")
             print("="*80)
             trainer.cost_tracker.print_statistics()
         elif hasattr(integration, 'cost_tracker'):
-            # 回退到integration的cost_tracker
+            # Fall back to integration.cost_tracker
             print("\n" + "="*80)
-            print("💰 LLM成本统计")
+            print("💰 LLM cost statistics")
             print("="*80)
             integration.cost_tracker.print_statistics()
         
         print("\n" + "="*80)
-        print("🎉 训练完成！")
+        print("🎉 Training complete!")
         print("="*80)
-        print(f"\n📈 最佳领域: {summary['best_domain']}")
-        print(f"📊 平均最佳准确率: {summary['average_best_accuracy']:.4f}")
-        print(f"💾 结果已保存到: {llm_specific_output}")
-        print(f"📄 摘要文件: {summary_path}")
-        print(f"\n💡 详细说明文档:")
-        print(f"  • 损失函数: FSM_LOSS_FUNCTIONS_EXPLAINED.md")
-        print(f"  • FSM设计: RANDOM_SAMPLED_FSM_DESIGN.md")
-        print(f"  • 集成指南: FINAL_INTEGRATION_GUIDE.md")
-        print(f"  • 核心集成: neural_fsm_mas/core_integration.py")
+        print(f"\n📈 Best-performing domain: {summary['best_domain']}")
+        print(f"📊 Average best accuracy: {summary['average_best_accuracy']:.4f}")
+        print(f"💾 Results saved to: {llm_specific_output}")
+        print(f"📄 Summary file: {summary_path}")
+        print(f"\n💡 Detailed documentation:")
+        print(f"  • Loss functions: FSM_LOSS_FUNCTIONS_EXPLAINED.md")
+        print(f"  • FSM design: RANDOM_SAMPLED_FSM_DESIGN.md")
+        print(f"  • Integration guide: FINAL_INTEGRATION_GUIDE.md")
+        print(f"  • Core integration: neural_fsm_mas/core_integration.py")
         
     except Exception as e:
-        print(f"\n❌ 训练出错: {e}")
+        print(f"\n❌ Training failed: {e}")
         import traceback
         traceback.print_exc()
 
 
 if __name__ == "__main__":
     asyncio.run(main())
-
