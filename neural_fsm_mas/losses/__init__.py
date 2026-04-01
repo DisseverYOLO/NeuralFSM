@@ -1,8 +1,8 @@
 """
 Loss Functions Module
-损失函数模块
+Loss functions module
 
-包含各种损失函数的实现
+Contains implementations of various loss functions
 """
 
 from .cost_loss import (
@@ -22,4 +22,3 @@ __all__ = [
     'batch_episode_costs',
     'estimate_baseline_cost',
 ]
-
