@@ -1,6 +1,6 @@
 """
 Core Integration Module for Enhanced FSM System
-核心集成模块 - 整合所有新功能
+Core integration module that combines all new features
 
 This module integrates:
 1. FSM Validation and Optimization
@@ -114,7 +114,7 @@ class EnhancedFSMIntegration:
         """
         Generate and validate FSM with all transitions having explicit conditions
         
-        This addresses your question: "一开始就生成了FSM中的所有状态之间的转移条件"
+        This addresses the question of generating transition conditions for all FSM states at the start.
         
         Args:
             fsm: FSM structure from Enhanced_FSM_Gen or other sources
@@ -135,7 +135,7 @@ class EnhancedFSMIntegration:
             raise ValueError("FSM validation failed: " + str(validation_results['errors']))
         
         # Step 2: Ensure all transitions have explicit conditions
-        # 关键点：确保每个转移都有明确的条件
+        # Key point: make sure each transition has an explicit condition.
         print("\n🔍 Ensuring all transitions have explicit conditions...")
         
         missing_conditions = 0
@@ -181,7 +181,7 @@ class EnhancedFSMIntegration:
         """
         Get transition condition for a sampled state path
         
-        This addresses: "采样到哪些状态及他们之间的转移路径就匹配对应的转移条件"
+        This addresses matching the corresponding transition condition for the sampled states and transition path.
         
         When TGN samples a path (e.g., state 0 → state 2),
         we retrieve the pre-defined transition condition between them.
@@ -210,7 +210,7 @@ class EnhancedFSMIntegration:
         Match agent output against transition conditions to select next state
         
         This is the core condition matching logic mentioned in docs:
-        "执行时自动匹配条件"
+        "Automatically match conditions during execution"
         
         Args:
             agent_output: Output from the agent
@@ -277,7 +277,7 @@ class EnhancedFSMIntegration:
         # Inject cost tracker
         if not hasattr(trainer, 'cost_tracker'):
             trainer.cost_tracker = self.cost_tracker
-        # 同时将成本追踪器注册为全局追踪器，供LLM客户端在任意位置记录调用成本
+        # Also register the cost tracker globally so LLM clients can record call costs from anywhere.
         set_global_cost_tracker(trainer.cost_tracker)
         
         # Inject FSM executor
@@ -336,7 +336,7 @@ class StateAgentCorrespondenceLearner:
     """
     Learn state-to-agent correspondence via TGN
     
-    This addresses: "采样的状态对应的agent也是采样的，即这种对应关系可以通过TGN学习的？"
+    This addresses whether the agent corresponding to a sampled state can also be learned by TGN.
     
     YES! The state-agent correspondence can be learned by TGN.
     
@@ -459,4 +459,3 @@ if __name__ == "__main__":
     validated_fsm = integration.generate_and_validate_fsm(test_fsm)
     
     print("\n✅ Test passed!")
-
