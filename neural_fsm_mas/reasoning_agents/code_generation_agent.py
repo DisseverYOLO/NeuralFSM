@@ -1,15 +1,15 @@
 """
 Code Generation Agent
-代码生成智能体
+Code generation agent
 
-适配自原始CodeWriting实现，专门为MetaAgent项目优化
+Adapted from the original CodeWriting implementation and optimized for the MetaAgent project
 """
 
 from typing import List, Any, Dict
 import sys
 from pathlib import Path
 
-# 添加MetaAgent路径
+# Add MetaAgent path
 sys.path.append(str(Path(__file__).parent.parent.parent))
 sys.path.append(str(Path(__file__).parent.parent))
 
@@ -21,9 +21,9 @@ from baseclass.LLM import LLM
 @ReasoningAgentRegistry.register_agent_type('code_generation')
 class CodeGenerationAgent(AgentExecutionNode):
     """
-    代码生成智能体
-    
-    专门用于生成和优化代码
+    Code generation agent
+
+    Specialized in generating and improving code
     """
     
     def __init__(self, 
@@ -42,7 +42,7 @@ class CodeGenerationAgent(AgentExecutionNode):
         self.programming_language = kwargs.get('programming_language', 'python')
     
     def _get_code_generation_prompt(self) -> str:
-        """获取代码生成的系统提示"""
+        """Get the system prompt for code generation."""
         return f"""You are an expert code generation agent specializing in {self.programming_language}. Your role is to:
 
 1. Generate clean, efficient, and well-documented code
@@ -59,7 +59,7 @@ Guidelines:
 - Provide clear code comments and documentation"""
     
     def _execute_single_reasoning(self, reasoning_context: Dict[str, Any], **execution_kwargs) -> Any:
-        """执行代码生成"""
+        """Execute code generation."""
         problem = reasoning_context['problem']
         spatial_context = reasoning_context.get('spatial_context', '')
         
@@ -84,5 +84,5 @@ Please generate clean, well-documented code that solves the given task."""
             return {"error": f"Code generation failed: {str(e)}", "problem": problem}
 
 
-# 导出主要类
+# Export main class
 __all__ = ['CodeGenerationAgent']
