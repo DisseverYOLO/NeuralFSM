@@ -1,13 +1,13 @@
 """
 FSM Validator and Optimizer
-FSM验证器和优化器
+FSM validator and optimizer
 
-功能:
-1. FSM可达性检查（确保能到达最终状态）
-2. 循环检测（避免无限循环）
-3. 自动添加救援转移
-4. 状态转移条件生成
-5. FSM结构优化
+Features:
+1. Check FSM reachability to ensure final states can be reached.
+2. Detect loops to avoid infinite cycling.
+3. Automatically add rescue transitions.
+4. Generate state transition conditions.
+5. Optimize FSM structure.
 """
 
 from typing import Dict, List, Set, Tuple, Optional, Any
@@ -16,35 +16,35 @@ import json
 
 
 class FSMValidator:
-    """FSM验证器"""
+    """FSM validator."""
     
     def __init__(self, fsm: Dict[str, Any]):
         """
-        初始化验证器
+        Initialize the validator.
         
         Args:
-            fsm: FSM结构字典，包含states和transitions
+            fsm: FSM structure dictionary containing `states` and `transitions`.
         """
         self.fsm = fsm
         self.states = {state['state_id']: state for state in fsm['states']}
         self.transitions = fsm['transitions']
         
-        # 构建邻接表
+        # Build the adjacency list.
         self.graph = defaultdict(list)
         for trans in self.transitions:
             self.graph[trans['from_state']].append(trans['to_state'])
     
     def check_reachability(self, verbose: bool = False) -> Tuple[bool, List[str]]:
         """
-        检查FSM可达性（从初始状态能否到达最终状态）
+        Check FSM reachability from an initial state to a final state.
         
         Args:
-            verbose: 是否打印详细信息
+            verbose: Whether to print detailed information.
         
         Returns:
             (is_reachable, unreachable_final_states)
         """
-        # 找到初始状态和最终状态
+        # Find initial states and final states.
         initial_states = [s['state_id'] for s in self.fsm['states'] if s.get('is_initial', False)]
         final_states = [s['state_id'] for s in self.fsm['states'] if s.get('is_final', False)]
         
@@ -58,7 +58,7 @@ class FSMValidator:
                 print("❌ No final state found!")
             return False, []
         
-        # BFS从初始状态开始
+        # Run BFS from the initial states.
         visited = set()
         queue = deque(initial_states)
         reachable_final_states = []
@@ -69,16 +69,16 @@ class FSMValidator:
                 continue
             visited.add(current)
             
-            # 检查是否为最终状态
+            # Check whether the current state is final.
             if current in final_states:
                 reachable_final_states.append(current)
             
-            # 添加邻居
+            # Add neighbors.
             for next_state in self.graph.get(current, []):
                 if next_state not in visited:
                     queue.append(next_state)
         
-        # 检查是否所有最终状态都可达
+        # Check whether all final states are reachable.
         unreachable_final_states = [fs for fs in final_states if fs not in reachable_final_states]
         
         if verbose:
@@ -93,11 +93,12 @@ class FSMValidator:
     
     def detect_strongly_connected_components(self) -> List[List[str]]:
         """
-        检测强连通分量（用于循环检测）
-        使用Tarjan算法
+        Detect strongly connected components for loop detection.
+        
+        Uses Tarjan's algorithm.
         
         Returns:
-            强连通分量列表
+            List of strongly connected components.
         """
         index_counter = [0]
         stack = []
@@ -138,17 +139,17 @@ class FSMValidator:
     
     def check_infinite_loops(self, verbose: bool = False) -> Tuple[bool, List[List[str]]]:
         """
-        检查是否存在可能的无限循环
+        Check whether possible infinite loops exist.
         
         Args:
-            verbose: 是否打印详细信息
+            verbose: Whether to print detailed information.
         
         Returns:
             (has_loops, loop_components)
         """
         sccs = self.detect_strongly_connected_components()
         
-        # 找到大小>1的强连通分量（可能的循环）
+        # Find SCCs with size > 1, which may indicate loops.
         loops = [scc for scc in sccs if len(scc) > 1]
         
         if verbose:
@@ -164,14 +165,14 @@ class FSMValidator:
     
     def add_rescue_transitions(self, priority: int = 99, verbose: bool = False) -> int:
         """
-        添加救援转移（确保所有状态都能到达最终状态）
+        Add rescue transitions to ensure all states can reach a final state.
         
         Args:
-            priority: 救援转移的优先级（默认最低）
-            verbose: 是否打印详细信息
+            priority: Rescue transition priority, lowest by default.
+            verbose: Whether to print detailed information.
         
         Returns:
-            添加的转移数量
+            Number of transitions added.
         """
         is_reachable, unreachable_finals = self.check_reachability(verbose=False)
         
@@ -180,7 +181,7 @@ class FSMValidator:
                 print("✅ FSM already has full reachability, no rescue transitions needed")
             return 0
         
-        # 找到所有非最终状态
+        # Find all non-final states.
         final_state_ids = [s['state_id'] for s in self.fsm['states'] if s.get('is_final', False)]
         non_final_states = [s for s in self.fsm['states'] if not s.get('is_final', False)]
         
@@ -189,26 +190,26 @@ class FSMValidator:
                 print("❌ No final state exists, cannot add rescue transitions")
             return 0
         
-        # 选择第一个最终状态作为救援目标
+        # Use the first final state as the rescue target.
         rescue_target = final_state_ids[0]
         rescue_target_name = self.states[rescue_target].get('state_name', rescue_target)
         
         added_count = 0
         for state in non_final_states:
-            # 检查是否已有到最终状态的转移
+            # Check whether a transition to a final state already exists.
             has_path_to_final = any(
                 trans['from_state'] == state['state_id'] and trans['to_state'] in final_state_ids
                 for trans in self.transitions
             )
             
             if not has_path_to_final:
-                # 添加救援转移
+                # Add a rescue transition.
                 rescue_transition = {
                     'from_state': state['state_id'],
                     'to_state': rescue_target,
                     'condition': f"If maximum steps reached or all attempts exhausted, finalize from {state.get('state_name', state['state_id'])}",
                     'priority': priority,
-                    'is_rescue': True  # 标记为救援转移
+                    'is_rescue': True  # Mark as a rescue transition.
                 }
                 self.transitions.append(rescue_transition)
                 self.graph[state['state_id']].append(rescue_target)
@@ -224,14 +225,14 @@ class FSMValidator:
     
     def validate_all(self, auto_fix: bool = True, verbose: bool = True) -> Dict[str, Any]:
         """
-        执行所有验证并返回结果
+        Run all validation checks and return the results.
         
         Args:
-            auto_fix: 是否自动修复问题
-            verbose: 是否打印详细信息
+            auto_fix: Whether to automatically fix issues.
+            verbose: Whether to print detailed information.
         
         Returns:
-            验证结果字典
+            Validation result dictionary.
         """
         if verbose:
             print("\n" + "=" * 80)
@@ -245,7 +246,7 @@ class FSMValidator:
             'fixes_applied': []
         }
         
-        # 1. 检查基本结构
+        # 1. Check the basic structure.
         if not self.fsm.get('states'):
             results['is_valid'] = False
             results['errors'].append("No states defined")
@@ -253,7 +254,7 @@ class FSMValidator:
         if not self.fsm.get('transitions'):
             results['warnings'].append("No transitions defined")
         
-        # 2. 检查初始状态和最终状态
+        # 2. Check initial and final states.
         initial_states = [s for s in self.fsm['states'] if s.get('is_initial', False)]
         final_states = [s for s in self.fsm['states'] if s.get('is_final', False)]
         
@@ -267,7 +268,7 @@ class FSMValidator:
             results['is_valid'] = False
             results['errors'].append("No final state defined")
         
-        # 3. 检查可达性
+        # 3. Check reachability.
         is_reachable, unreachable = self.check_reachability(verbose=verbose)
         if not is_reachable:
             results['is_valid'] = False
@@ -277,12 +278,12 @@ class FSMValidator:
                 added = self.add_rescue_transitions(verbose=verbose)
                 results['fixes_applied'].append(f"Added {added} rescue transitions")
         
-        # 4. 检查循环
+        # 4. Check loops.
         has_loops, loops = self.check_infinite_loops(verbose=verbose)
         if has_loops:
             results['warnings'].append(f"Found {len(loops)} potential loop(s) - ensure visit count limits are enforced")
         
-        # 5. 检查转移条件
+        # 5. Check transition conditions.
         transitions_without_condition = [
             t for t in self.transitions 
             if not t.get('condition') or t['condition'].strip() == ''
@@ -313,20 +314,20 @@ class FSMValidator:
 
 
 class FSMTransitionConditionGenerator:
-    """FSM状态转移条件生成器"""
+    """FSM transition condition generator."""
     
     @staticmethod
     def generate_condition_from_llm(state_from: Dict, state_to: Dict, llm) -> str:
         """
-        使用LLM为状态转移生成条件
+        Use an LLM to generate a state transition condition.
         
         Args:
-            state_from: 源状态
-            state_to: 目标状态
-            llm: LLM实例
+            state_from: Source state.
+            state_to: Target state.
+            llm: LLM instance.
         
         Returns:
-            转移条件字符串
+            Transition condition string.
         """
         from_name = state_from.get('state_name', state_from['state_id'])
         from_desc = state_from.get('instruction', 'No description')
@@ -354,51 +355,51 @@ Output ONLY the condition as a single sentence, no explanation:
         
         try:
             condition = llm.chat(prompt).strip()
-            # 清理可能的引号
+            # Remove possible surrounding quotes.
             condition = condition.strip('"').strip("'")
             return condition
         except Exception as e:
-            # 降级策略：生成默认条件
+            # Fallback strategy: generate a default condition.
             return f"If {from_name} task completed, proceed to {to_name}"
     
     @staticmethod
     def generate_default_condition(state_from: Dict, state_to: Dict) -> str:
         """
-        生成默认的转移条件（不使用LLM）
+        Generate a default transition condition without using an LLM.
         
         Args:
-            state_from: 源状态
-            state_to: 目标状态
+            state_from: Source state.
+            state_to: Target state.
         
         Returns:
-            默认转移条件
+            Default transition condition.
         """
         from_name = state_from.get('state_name', state_from['state_id'])
         to_name = state_to.get('state_name', state_to['state_id'])
         
-        # 检查是否有completion_condition字段
+        # Check whether a completion_condition field exists.
         if 'completion_condition' in state_from:
             return f"When {from_name} completion condition is met: {state_from['completion_condition']}"
         
-        # 检查是否为最终状态
+        # Check whether the target is a final state.
         if state_to.get('is_final', False):
             return f"When {from_name} completes and ready to submit final answer"
         
-        # 默认条件
+        # Default condition.
         return f"When {from_name} task completed successfully, proceed to {to_name}"
     
     @staticmethod
     def add_conditions_to_transitions(fsm: Dict, llm=None, use_llm: bool = False) -> int:
         """
-        为FSM中缺少条件的转移添加条件
+        Add conditions to FSM transitions that are missing them.
         
         Args:
-            fsm: FSM结构
-            llm: LLM实例（如果use_llm=True）
-            use_llm: 是否使用LLM生成条件
+            fsm: FSM structure.
+            llm: LLM instance when `use_llm=True`.
+            use_llm: Whether to use an LLM to generate conditions.
         
         Returns:
-            添加条件的数量
+            Number of conditions added.
         """
         states_dict = {s['state_id']: s for s in fsm['states']}
         added_count = 0
@@ -422,37 +423,37 @@ Output ONLY the condition as a single sentence, no explanation:
                 
                 trans['condition'] = condition
                 if 'priority' not in trans:
-                    trans['priority'] = 1  # 默认优先级
+                    trans['priority'] = 1  # Default priority.
                 
                 added_count += 1
         
         return added_count
 
 
-# ========== 便捷函数 ==========
+# ========== Convenience Functions ==========
 
 def validate_fsm(fsm: Dict, auto_fix: bool = True, verbose: bool = True) -> Dict[str, Any]:
-    """验证FSM"""
+    """Validate an FSM."""
     validator = FSMValidator(fsm)
     return validator.validate_all(auto_fix=auto_fix, verbose=verbose)
 
 
 def check_fsm_reachability(fsm: Dict, verbose: bool = False) -> bool:
-    """检查FSM可达性"""
+    """Check FSM reachability."""
     validator = FSMValidator(fsm)
     is_reachable, _ = validator.check_reachability(verbose=verbose)
     return is_reachable
 
 
 def add_transition_conditions(fsm: Dict, llm=None, use_llm: bool = False) -> int:
-    """为转移添加条件"""
+    """Add conditions to transitions."""
     return FSMTransitionConditionGenerator.add_conditions_to_transitions(fsm, llm, use_llm)
 
 
-# ========== 测试示例 ==========
+# ========== Test Example ==========
 
 if __name__ == "__main__":
-    # 创建测试FSM
+    # Create a test FSM.
     test_fsm = {
         'states': [
             {'state_id': '0', 'state_name': 'Initial', 'is_initial': True, 'is_final': False, 'instruction': 'Start'},
@@ -463,7 +464,7 @@ if __name__ == "__main__":
         'transitions': [
             {'from_state': '0', 'to_state': '1', 'condition': 'Initial setup complete', 'priority': 1},
             {'from_state': '1', 'to_state': '2', 'condition': 'Processing complete', 'priority': 1},
-            # 缺少从2到3的转移 - 会被检测并修复
+            # The transition from 2 to 3 is missing and will be detected and fixed.
         ]
     }
     
@@ -471,9 +472,8 @@ if __name__ == "__main__":
     print("\nOriginal FSM:")
     print(json.dumps(test_fsm, indent=2))
     
-    # 验证并自动修复
+    # Validate and automatically fix it.
     results = validate_fsm(test_fsm, auto_fix=True, verbose=True)
     
     print("\nFixed FSM:")
     print(json.dumps(test_fsm, indent=2))
-
