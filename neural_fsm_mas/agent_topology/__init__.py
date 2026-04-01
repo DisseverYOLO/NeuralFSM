@@ -1,8 +1,8 @@
 """
 Agent Topology Module
-智能体拓扑模块
+Agent topology module
 
-包含多智能体拓扑管理和节点实现
+Contains multi-agent topology management and node implementations
 """
 
 from .multi_agent_topology import MultiAgentTopologyManager
