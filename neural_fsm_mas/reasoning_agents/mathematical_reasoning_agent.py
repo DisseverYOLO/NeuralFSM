@@ -1,16 +1,16 @@
 """
 Mathematical Reasoning Agent
-数学推理智能体
+Mathematical reasoning agent
 
-适配自原始MathSolver实现，专门为MetaAgent项目优化
-支持数学问题的推理和求解
+Adapted from the original MathSolver implementation and optimized for the MetaAgent project.
+Supports mathematical reasoning and problem solving.
 """
 
 from typing import List, Any, Dict
 import sys
 from pathlib import Path
 
-# 添加MetaAgent路径
+# Add the MetaAgent path.
 sys.path.append(str(Path(__file__).parent.parent.parent))
 sys.path.append(str(Path(__file__).parent.parent))
 
@@ -24,13 +24,13 @@ import re
 @ReasoningAgentRegistry.register_agent_type('mathematical_reasoning')
 class MathematicalReasoningAgent(AgentExecutionNode):
     """
-    数学推理智能体
+    Mathematical reasoning agent.
     
-    专门用于处理数学问题的推理和求解，支持：
-    1. 数学表达式解析和计算
-    2. 多步骤数学推理
-    3. 与其他智能体的协作推理
-    4. 基于上下文的数学问题求解
+    Specialized for mathematical reasoning and problem solving, with support for:
+    1. Parsing and computing mathematical expressions.
+    2. Multi-step mathematical reasoning.
+    3. Collaborative reasoning with other agents.
+    4. Context-based mathematical problem solving.
     """
     
     def __init__(self, 
@@ -41,19 +41,19 @@ class MathematicalReasoningAgent(AgentExecutionNode):
                  **kwargs):
         super().__init__(node_id, agent_role, domain, llm_name, **kwargs)
         
-        # 初始化LLM
+        # Initialize the LLM.
         self.reasoning_llm = LLM(
             system_prompt=self._get_mathematical_reasoning_prompt(),
             use_azure=kwargs.get('use_azure', False)
         )
         
-        # 数学推理相关配置
+        # Configuration related to mathematical reasoning.
         self.enable_step_by_step_reasoning = kwargs.get('enable_step_by_step_reasoning', True)
         self.enable_verification = kwargs.get('enable_verification', True)
         self.max_reasoning_steps = kwargs.get('max_reasoning_steps', 10)
         
     def _get_mathematical_reasoning_prompt(self) -> str:
-        """获取数学推理的系统提示"""
+        """Get the system prompt for mathematical reasoning."""
         return """You are an expert mathematical reasoning agent. Your role is to:
 
 1. Analyze mathematical problems step by step
@@ -82,20 +82,21 @@ When working with other agents:
                                 temporal_interaction_info: Dict[str, Dict], 
                                 **execution_kwargs) -> List[Any]:
         """
-        处理数学推理输入
+        Process mathematical reasoning inputs.
         
-        整合原始数学问题、空间交互信息（其他智能体的解答）和时间交互信息（历史解答）
+        Combine the raw math problem, spatial interaction information
+        from other agents, and temporal interaction information from past rounds.
         """
         processed_inputs = []
         
         for raw_input in raw_task_inputs:
-            # 提取数学问题
+            # Extract the math problem.
             if isinstance(raw_input, dict):
                 math_problem = raw_input.get('task', str(raw_input))
             else:
                 math_problem = str(raw_input)
             
-            # 构建推理上下文
+            # Build the reasoning context.
             reasoning_context = {
                 'problem': math_problem,
                 'spatial_context': self._format_spatial_context(spatial_interaction_info),
@@ -108,7 +109,7 @@ When working with other agents:
         return processed_inputs
     
     def _format_spatial_context(self, spatial_info: Dict[str, Dict]) -> str:
-        """格式化空间交互上下文（其他智能体的当前解答）"""
+        """Format the spatial interaction context from other agents' current solutions."""
         if not spatial_info:
             return ""
         
@@ -123,7 +124,7 @@ When working with other agents:
                 context_parts.append(f"\n{agent_role} (Agent {agent_id}):")
                 context_parts.append(f"  Solution: {latest_output}")
                 
-                # 尝试提取数值答案
+                # Try to extract a numerical answer.
                 extracted_answer = self._extract_numerical_answer(str(latest_output))
                 if extracted_answer:
                     context_parts.append(f"  Extracted Answer: {extracted_answer}")
@@ -131,7 +132,7 @@ When working with other agents:
         return "\n".join(context_parts)
     
     def _format_temporal_context(self, temporal_info: Dict[str, Dict]) -> str:
-        """格式化时间交互上下文（历史解答）"""
+        """Format the temporal interaction context from historical solutions."""
         if not temporal_info:
             return ""
         
@@ -149,13 +150,13 @@ When working with other agents:
         return "\n".join(context_parts)
     
     def _extract_numerical_answer(self, text: str) -> str:
-        """从文本中提取数值答案"""
-        # 查找常见的答案模式
+        """Extract a numerical answer from text."""
+        # Search for common answer patterns.
         patterns = [
             r'(?:answer|result|solution)(?:\s*is\s*|\s*:\s*)([+-]?\d+(?:\.\d+)?)',
             r'([+-]?\d+(?:\.\d+)?)\s*(?:is\s+the\s+answer|is\s+correct)',
             r'=\s*([+-]?\d+(?:\.\d+)?)',
-            r'([+-]?\d+(?:\.\d+)?)\s*$'  # 行末的数字
+            r'([+-]?\d+(?:\.\d+)?)\s*$'  # Number at the end of the line.
         ]
         
         for pattern in patterns:
@@ -167,22 +168,22 @@ When working with other agents:
     
     def _execute_single_reasoning(self, reasoning_context: Dict[str, Any], **execution_kwargs) -> Any:
         """
-        执行单个数学推理任务
+        Execute a single mathematical reasoning task.
         """
         problem = reasoning_context['problem']
         spatial_context = reasoning_context['spatial_context']
         temporal_context = reasoning_context['temporal_context']
         
-        # 构建完整的推理提示
+        # Build the full reasoning prompt.
         reasoning_prompt = self._build_mathematical_reasoning_prompt(
             problem, spatial_context, temporal_context
         )
         
         try:
-            # 调用LLM进行推理
+            # Call the LLM to perform reasoning.
             reasoning_result = self.reasoning_llm.chat(message=reasoning_prompt)
             
-            # 后处理推理结果
+            # Post-process the reasoning result.
             processed_result = self._post_process_mathematical_result(reasoning_result)
             
             return processed_result
@@ -196,7 +197,7 @@ When working with other agents:
                                            problem: str, 
                                            spatial_context: str, 
                                            temporal_context: str) -> str:
-        """构建数学推理提示"""
+        """Build the mathematical reasoning prompt."""
         prompt_parts = [f"Mathematical Problem: {problem}"]
         
         if spatial_context:
@@ -220,14 +221,14 @@ When working with other agents:
         return "\n".join(prompt_parts)
     
     def _post_process_mathematical_result(self, raw_result: str) -> Dict[str, Any]:
-        """后处理数学推理结果"""
-        # 提取数值答案
+        """Post-process the mathematical reasoning result."""
+        # Extract the numerical answer.
         numerical_answer = self._extract_numerical_answer(raw_result)
         
-        # 分析推理步骤
+        # Analyze the reasoning steps.
         reasoning_steps = self._extract_reasoning_steps(raw_result)
         
-        # 构建结构化结果
+        # Build a structured result.
         processed_result = {
             'raw_solution': raw_result,
             'numerical_answer': numerical_answer,
@@ -239,8 +240,8 @@ When working with other agents:
         return processed_result
     
     def _extract_reasoning_steps(self, text: str) -> List[str]:
-        """提取推理步骤"""
-        # 查找编号的步骤
+        """Extract reasoning steps."""
+        # Look for numbered steps.
         step_patterns = [
             r'(?:Step\s+\d+|^\d+\.)\s*[:\-]?\s*(.+?)(?=(?:Step\s+\d+|^\d+\.)|$)',
             r'(?:First|Second|Third|Fourth|Fifth|Finally)[:\-,]\s*(.+?)(?=(?:First|Second|Third|Fourth|Fifth|Finally)|$)'
@@ -253,15 +254,15 @@ When working with other agents:
                 steps.extend([step.strip() for step in matches])
                 break
         
-        # 如果没找到明确的步骤，按句子分割
+        # If no explicit steps are found, split by sentence.
         if not steps:
             sentences = text.split('.')
             steps = [s.strip() for s in sentences if len(s.strip()) > 10]
         
-        return steps[:self.max_reasoning_steps]  # 限制步骤数量
+        return steps[:self.max_reasoning_steps]  # Limit the number of steps.
     
     def _estimate_confidence(self, text: str) -> float:
-        """估计推理结果的置信度"""
+        """Estimate the confidence of the reasoning result."""
         confidence_indicators = {
             'high': ['verified', 'confirmed', 'double-checked', 'certain', 'definitely'],
             'medium': ['likely', 'probably', 'should be', 'appears to be'],
@@ -270,12 +271,12 @@ When working with other agents:
         
         text_lower = text.lower()
         
-        # 检查高置信度指标
+        # Check high-confidence indicators.
         high_count = sum(1 for indicator in confidence_indicators['high'] if indicator in text_lower)
         medium_count = sum(1 for indicator in confidence_indicators['medium'] if indicator in text_lower)
         low_count = sum(1 for indicator in confidence_indicators['low'] if indicator in text_lower)
         
-        # 基于指标计算置信度
+        # Compute confidence based on the indicators.
         if high_count > 0:
             base_confidence = 0.8
         elif medium_count > 0:
@@ -283,9 +284,9 @@ When working with other agents:
         elif low_count > 0:
             base_confidence = 0.4
         else:
-            base_confidence = 0.7  # 默认中等置信度
+            base_confidence = 0.7  # Default medium confidence.
         
-        # 根据推理长度调整（更详细的推理通常更可靠）
+        # Adjust based on reasoning length because more detailed reasoning is often more reliable.
         length_factor = min(len(text) / 500, 1.0) * 0.2
         
         final_confidence = min(base_confidence + length_factor, 1.0)
@@ -293,14 +294,14 @@ When working with other agents:
     
     async def _async_execute_single_reasoning(self, reasoning_context: Dict[str, Any], **execution_kwargs) -> Any:
         """
-        异步执行单个数学推理任务
+        Execute a single mathematical reasoning task asynchronously.
         """
-        # 对于数学推理，通常不需要真正的异步处理
-        # 但可以在这里添加异步LLM调用逻辑
+        # Mathematical reasoning usually does not need true asynchronous execution,
+        # but async LLM call logic could be added here.
         return self._execute_single_reasoning(reasoning_context, **execution_kwargs)
     
     def get_mathematical_capabilities(self) -> Dict[str, Any]:
-        """获取数学推理能力描述"""
+        """Get a description of the mathematical reasoning capabilities."""
         return {
             'supported_topics': [
                 'arithmetic', 'algebra', 'geometry', 'calculus', 
@@ -317,5 +318,5 @@ When working with other agents:
         }
 
 
-# 导出主要类
+# Export main classes
 __all__ = ['MathematicalReasoningAgent']
