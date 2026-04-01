@@ -1,3 +1,5 @@
+"""Translated module documentation."""
+
 import shortuuid
 from typing import Any, List, Optional, Dict, Tuple
 from abc import ABC
@@ -8,7 +10,6 @@ import sys
 import os
 from pathlib import Path
 
-# Translated comment
 sys.path.append(str(Path(__file__).parent.parent.parent))
 sys.path.append(str(Path(__file__).parent.parent))
 
@@ -42,7 +43,6 @@ class MultiAgentTopologyManager(ABC):
                 temporal_encoding_dimension: int = 32,
                 ):
         
-                # Translated comment
         if fixed_spatial_connection_masks is None:
             fixed_spatial_connection_masks = [
                 [1 if i != j else 0 for j in range(len(agent_role_names))] 
@@ -54,18 +54,15 @@ class MultiAgentTopologyManager(ABC):
                 for i in range(len(agent_role_names))
             ]
         
-                # Translated comment
         fixed_spatial_connection_masks = torch.tensor(fixed_spatial_connection_masks).view(-1)
         fixed_temporal_connection_masks = torch.tensor(fixed_temporal_connection_masks).view(-1)
         
-                # Translated comment
         expected_mask_size = len(agent_role_names) * len(agent_role_names)
         assert len(fixed_spatial_connection_masks) == expected_mask_size,\
             f"Spatial connection masks size mismatch: expected {expected_mask_size}, got {len(fixed_spatial_connection_masks)}"
         assert len(fixed_temporal_connection_masks) == expected_mask_size,\
             f"Temporal connection masks size mismatch: expected {expected_mask_size}, got {len(fixed_temporal_connection_masks)}"
         
-                # Translated comment
         self.topology_id: str = shortuuid.ShortUUID().random(length=6)
         self.task_domain: str = task_domain
         self.language_model_name: str = language_model_name
@@ -77,7 +74,6 @@ class MultiAgentTopologyManager(ABC):
         self.temporal_encoding_dimension = temporal_encoding_dimension
         self.current_interaction_round = 0
         
-                # Translated comment
         self.decision_executor: AgentExecutionNode = ReasoningAgentFactory.create_agent(
             decision_strategy, 
             domain=self.task_domain, 
@@ -85,26 +81,21 @@ class MultiAgentTopologyManager(ABC):
         )
         self.agent_execution_nodes: Dict[str, AgentExecutionNode] = {}
         
-                # Translated comment
         self.fsm_state_manager: Optional[FSMStateManager] = None
-        self.use_fsm_mode: bool = False          # Translated comment
+        self.use_fsm_mode: bool = False
         self.potential_spatial_connections: List[List[str, str]] = []
         self.potential_temporal_connections: List[List[str, str]] = []
         self.agent_configuration_params = agent_configuration_params if agent_configuration_params is not None else [{} for _ in agent_role_names]
         
-                # Translated comment
         self._initialize_agent_nodes()
         self._initialize_potential_connections()
         
-                # Translated comment
         self.domain_prompt_manager = DomainPromptManager.get_manager(task_domain)
         self.role_adjacency_matrix = self._construct_role_adjacency_matrix()
         self.agent_features = self._construct_agent_features()
         
-                # Translated comment
         self._initialize_neural_networks()
         
-                # Translated comment
         self._initialize_connection_parameters(
             initial_spatial_connection_prob, 
             fixed_spatial_connection_masks,
@@ -116,7 +107,6 @@ class MultiAgentTopologyManager(ABC):
         """Translated function documentation."""
         for i, agent_role in enumerate(self.agent_role_names):
             agent_config = self.agent_configuration_params[i]
-                        # Translated comment
             agent_node = ConcreteAgentExecutionNode(
                 node_id=f"agent_{i}",
                 agent_role=agent_role,
@@ -124,7 +114,6 @@ class MultiAgentTopologyManager(ABC):
                 llm_name=self.language_model_name,
                 **agent_config
             )
-                        # Translated comment
             agent_node._use_fsm_mode = self.use_fsm_mode
             self.agent_execution_nodes[agent_node.node_id] = agent_node
     
@@ -132,13 +121,11 @@ class MultiAgentTopologyManager(ABC):
         """Translated function documentation."""
         agent_ids = list(self.agent_execution_nodes.keys())
         
-                # Translated comment
         for source_id in agent_ids:
             for target_id in agent_ids:
                 if source_id != target_id:
                     self.potential_spatial_connections.append([source_id, target_id])
         
-                # Translated comment
         for source_id in agent_ids:
             for target_id in agent_ids:
                 self.potential_temporal_connections.append([source_id, target_id])
@@ -150,7 +137,6 @@ class MultiAgentTopologyManager(ABC):
         role_adjacency = torch.zeros((num_agents, num_agents))
         role_to_indices = {}
         
-                # Translated comment
         for connection in role_connections:
             input_role, output_role = connection
             role_to_indices[input_role] = []
@@ -161,7 +147,6 @@ class MultiAgentTopologyManager(ABC):
             if agent_role in role_to_indices:
                 role_to_indices[agent_role].append(i)
             
-                # Translated comment
         for connection in role_connections:
             input_role, output_role = connection
             input_indices = role_to_indices.get(input_role, [])
@@ -171,7 +156,6 @@ class MultiAgentTopologyManager(ABC):
                 for output_idx in output_indices:
                     role_adjacency[input_idx][output_idx] = 1
         
-                # Translated comment
         edge_index, edge_weights = dense_to_sparse(role_adjacency)
         return edge_index
     
@@ -182,7 +166,6 @@ class MultiAgentTopologyManager(ABC):
             agent_role = self.agent_execution_nodes[agent_id].agent_role
             role_description = self.domain_prompt_manager.get_role_description(agent_role)
             
-                        # Translated comment
             feature_vector = self._get_text_embedding(role_description)
             agent_features.append(feature_vector)
         
@@ -190,13 +173,11 @@ class MultiAgentTopologyManager(ABC):
     
     def _get_text_embedding(self, text: str) -> np.ndarray:
         """Translated function documentation."""
-                # Translated comment
-        return np.random.randn(384)          # Translated comment
+        return np.random.randn(384)
     
     def _initialize_neural_networks(self):
         """Translated function documentation."""
         if self.use_neural_temporal_graph:
-                        # Translated comment
             self.neural_temporal_graph = NeuralTemporalGraph(
                 agent_feature_dim=self.agent_features.size(1),
                 memory_dimension=self.memory_bank_dimension,
@@ -205,18 +186,15 @@ class MultiAgentTopologyManager(ABC):
                 network_layers=2
             )
             
-                        # Translated comment
             self.compatibility_graph_network = CompatibilityGraphNetwork(
                 self.agent_features.size(1) * 2, 16, self.agent_features.size(1)
             )
         else:
-                        # Translated comment
             self.compatibility_graph_network = CompatibilityGraphNetwork(
                 self.agent_features.size(1) * 2, 16, self.agent_features.size(1)
             )
             self.neural_temporal_graph = None
             
-                # Translated comment
         self.decision_decoder = MultiLayerPerceptron(384, 16, 16)
     
     def _initialize_connection_parameters(self, 
@@ -225,7 +203,6 @@ class MultiAgentTopologyManager(ABC):
                                         initial_temporal_prob: float,
                                         fixed_temporal_masks: torch.Tensor):
         """Translated function documentation."""
-                # Translated comment
         if self.enable_spatial_optimization:
             initial_spatial_logit = torch.log(torch.tensor(initial_spatial_prob / (1 - initial_spatial_prob)))
         else:
@@ -237,7 +214,6 @@ class MultiAgentTopologyManager(ABC):
         )
         self.spatial_connection_masks = torch.nn.Parameter(fixed_spatial_masks, requires_grad=False)
 
-                # Translated comment
         if self.enable_temporal_optimization:
             initial_temporal_logit = torch.log(torch.tensor(initial_temporal_prob / (1 - initial_temporal_prob)))
         else:
@@ -302,12 +278,10 @@ class MultiAgentTopologyManager(ABC):
                     source_agent.add_successor_connection(target_agent, 'spatial')
                 continue
             
-                        # Translated comment
             connection_probability = torch.sigmoid(edge_logit / sampling_temperature)
             if connection_threshold:
                 connection_probability = torch.tensor(1 if connection_probability > connection_threshold else 0)
                 
-                        # Translated comment
             if torch.rand(1) < connection_probability:
                 source_agent.add_successor_connection(target_agent, 'spatial')
                 connection_log_probs.append(torch.log(connection_probability))
@@ -341,12 +315,10 @@ class MultiAgentTopologyManager(ABC):
                     source_agent.add_successor_connection(target_agent, 'temporal')
                 continue
             
-                        # Translated comment
             connection_probability = torch.sigmoid(edge_logit / sampling_temperature)
             if connection_threshold:
                 connection_probability = torch.tensor(1 if connection_probability > connection_threshold else 0)
                 
-                        # Translated comment
             if torch.rand(1) < connection_probability:
                 source_agent.add_successor_connection(target_agent, 'temporal')
                 connection_log_probs.append(torch.log(connection_probability))
@@ -384,16 +356,13 @@ class MultiAgentTopologyManager(ABC):
                                           max_retry_attempts: int = 3, 
                                           max_execution_time: int = 600) -> List[Any]:
         """Translated function documentation."""
-                # Translated comment
         reasoning_log_probs = torch.tensor(0.0, dtype=torch.float32, requires_grad=True)
         enhanced_features = self.construct_enhanced_agent_features(task_input['task'])
         
         if self.use_neural_temporal_graph and self.neural_temporal_graph is not None:
-                        # Translated comment
             temporal_stamps = torch.tensor([self.current_interaction_round] * len(self.agent_execution_nodes), dtype=torch.float)
             agent_indices = torch.arange(len(self.agent_execution_nodes))
             
-                        # Translated comment
             reasoning_logits = self.neural_temporal_graph(
                 enhanced_features, 
                 self.role_adjacency_matrix, 
@@ -401,25 +370,20 @@ class MultiAgentTopologyManager(ABC):
                 agent_indices=agent_indices
             )
         else:
-                        # Translated comment
             reasoning_logits = self.compatibility_graph_network(enhanced_features, self.role_adjacency_matrix)
             
-                # Translated comment
         reasoning_logits = self.decision_decoder(reasoning_logits)
         self.spatial_connection_logits = reasoning_logits @ reasoning_logits.t()
         self.spatial_connection_logits = self._min_max_normalize(torch.flatten(self.spatial_connection_logits))
 
-                # Translated comment
         for interaction_round in range(num_interaction_rounds):
             self.current_interaction_round = interaction_round
             reasoning_log_probs += self.construct_spatial_connections()
             reasoning_log_probs += self.construct_temporal_connections(interaction_round)
             
-                        # Translated comment
             agent_in_degrees = {agent_id: len(agent.spatial_predecessors) for agent_id, agent in self.agent_execution_nodes.items()}
             execution_queue = [agent_id for agent_id, degree in agent_in_degrees.items() if degree == 0]
 
-                        # Translated comment
             while execution_queue:
                 current_agent_id = execution_queue.pop(0)
                 retry_attempts = 0
@@ -435,7 +399,6 @@ class MultiAgentTopologyManager(ABC):
                         print(f"Agent {current_agent_id} execution error: {e}")
                     retry_attempts += 1
                 
-                                # Translated comment
                 for successor_agent in self.agent_execution_nodes[current_agent_id].spatial_successors:
                     if successor_agent.node_id not in self.agent_execution_nodes.keys():
                         continue
@@ -443,10 +406,8 @@ class MultiAgentTopologyManager(ABC):
                     if agent_in_degrees[successor_agent.node_id] == 0:
                         execution_queue.append(successor_agent.node_id)
             
-                        # Translated comment
             self.update_agent_memories()
             
-                # Translated comment
         self.connect_to_decision_executor()
         await self.decision_executor.async_execute_reasoning(task_input)
         
@@ -458,14 +419,11 @@ class MultiAgentTopologyManager(ABC):
     
     def update_agent_memories(self):
         """Translated function documentation."""
-                # Translated comment
         for agent_id, agent_node in self.agent_execution_nodes.items():
             agent_node.set_current_interaction_round(self.current_interaction_round)
             agent_node.update_interaction_memory()
         
-                # Translated comment
         if self.use_neural_temporal_graph and self.neural_temporal_graph is not None:
-                        # Translated comment
             pass
     
     def connect_to_decision_executor(self):
@@ -524,7 +482,6 @@ class MultiAgentTopologyManager(ABC):
         return (tensor - min_val) / (max_val - min_val)
     
     # ========================================================================
-        # Translated comment
     # ========================================================================
     
     def initialize_fsm_from_description(self, fsm_description: Dict[str, Any]):
@@ -532,7 +489,6 @@ class MultiAgentTopologyManager(ABC):
         agent_ids = list(self.agent_execution_nodes.keys())
         self.fsm_state_manager = FSMStateManager(agent_ids)
         
-                # Translated comment
         for state_desc in fsm_description.get('states', []):
             self.fsm_state_manager.add_state(
                 state_id=state_desc['id'],
@@ -543,12 +499,10 @@ class MultiAgentTopologyManager(ABC):
                 description=state_desc.get('description', '')
             )
         
-                # Translated comment
         listeners_dict = fsm_description.get('listeners', {})
         for state_id, listener_ids in listeners_dict.items():
             self.fsm_state_manager.set_listeners(int(state_id), listener_ids)
         
-                # Translated comment
         self.use_fsm_mode = True
         
         print(f"✅ FSM initialized with {len(self.fsm_state_manager.states)} states")
@@ -564,15 +518,12 @@ class MultiAgentTopologyManager(ABC):
         if not self.use_fsm_mode or self.fsm_state_manager is None:
             raise ValueError("FSM mode is not enabled. Call initialize_fsm_from_description() first.")
         
-                # Translated comment
         self.fsm_state_manager.reset()
         
-                # Translated comment
         reasoning_log_probs = torch.tensor(0.0, dtype=torch.float32, requires_grad=True)
         
-                # Translated comment
         transition_count = 0
-        last_state_output: Optional[str] = None          # Translated comment
+        last_state_output: Optional[str] = None
         
         while transition_count < max_transitions:
             current_state = self.fsm_state_manager.get_current_state()
@@ -580,10 +531,8 @@ class MultiAgentTopologyManager(ABC):
             if current_state is None:
                 return "Error: No current state", reasoning_log_probs
             
-                        # Translated comment
             agent_node = self.agent_execution_nodes.get(current_state.responsible_agent_id)
             
-                        # Translated comment
             if agent_node:
                 agent_display = f"{current_state.responsible_agent_id} ({agent_node.agent_role})"
             else:
@@ -597,7 +546,6 @@ class MultiAgentTopologyManager(ABC):
             if agent_node is None:
                 return f"Error: Agent {current_state.responsible_agent_id} not found", reasoning_log_probs
             
-                        # Translated comment
             retry_attempts = 0
             output = None
             
@@ -611,7 +559,6 @@ class MultiAgentTopologyManager(ABC):
                         timeout=max_execution_time
                     )
                     
-                                        # Translated comment
                     if agent_node.execution_outputs:
                         output = agent_node.execution_outputs[-1]
                     break
@@ -628,41 +575,32 @@ class MultiAgentTopologyManager(ABC):
             print(f"\n🤖 Agent Output:\n{clean_output[:200]}...")
             last_state_output = output
             
-                        # Translated comment
             if current_state.is_final:
                 final_answer = self.fsm_state_manager.check_final_answer(output)
                 if final_answer:
                     print(f"\n✅ Final Answer: {final_answer}")
                     return final_answer, reasoning_log_probs
                 else:
-                                        # Translated comment
                     print(f"\n✅ Reached final state, returning output")
                     return output, reasoning_log_probs
             
-                        # Translated comment
             next_state_id = self.fsm_state_manager.extract_state_transition(output)
             
-                        # Translated comment
             if next_state_id is None:
                 print(f"\n⚠️  Failed to extract a state-transition tag from the agent output (<STATE_TRANS>: X)")
                 print(f"   💡 Will try sampling from the TGN-predicted state-transition probabilities...")
                 
-                                # Translated comment
                 if fsm_outputs and 'transition_probs' in fsm_outputs:
                     transition_probs = fsm_outputs['transition_probs']
                     if transition_probs is not None and len(transition_probs) > 0:
-                                                # Translated comment
                         import torch.nn.functional as F
                         if isinstance(transition_probs, torch.Tensor):
-                                                        # Translated comment
                             if transition_probs.dim() == 1:
-                                                                # Translated comment
                                 sampled_idx = torch.multinomial(transition_probs, num_samples=1).item()
                                 next_state_id = sampled_idx
                                 print(f"   ✅ Sampled using TGN-predicted state-transition probabilities")
                                 print(f"   📊 Sampled result: State {next_state_id} (probability: {transition_probs[sampled_idx]:.4f})")
                             else:
-                                                                # Translated comment
                                 if current_state.state_id < transition_probs.size(0):
                                     state_probs = transition_probs[current_state.state_id]
                                     sampled_idx = torch.multinomial(state_probs, num_samples=1).item()
@@ -676,12 +614,10 @@ class MultiAgentTopologyManager(ABC):
                 else:
                     print(f"   ❌ Could not find TGN-predicted state-transition probabilities ('transition_probs' missing in fsm_outputs)")
                 
-                                # Translated comment
                 if next_state_id is None:
                     print(f"\n   ⚠️  Could not use TGN-predicted state-transition probabilities")
                     print(f"   💡 Falling back to the next sequential state...")
                     
-                                        # Translated comment
                     all_states = list(self.fsm_state_manager.states.keys())
                     current_idx = all_states.index(current_state.state_id) if current_state.state_id in all_states else -1
                     if current_idx >= 0 and current_idx < len(all_states) - 1:
@@ -697,7 +633,6 @@ class MultiAgentTopologyManager(ABC):
             
             print(f"\n→ Transitioning to State {next_state_id}")
             
-                        # Translated comment
             listeners = self.fsm_state_manager.get_listeners(current_state.state_id)
             
             if listeners:
@@ -706,13 +641,9 @@ class MultiAgentTopologyManager(ABC):
                 for listener_id in listeners:
                     listener_node = self.agent_execution_nodes.get(listener_id)
                     if listener_node:
-                                                # Translated comment
                         message = f"\n[Message from {agent_node.agent_role} at State {current_state.state_id}]:\n{output}\n"
-                                                # Translated comment
-                                                # Translated comment
                         listener_node.add_predecessor_message(message)
             
-                        # Translated comment
             success = self.fsm_state_manager.transition_to_state(next_state_id)
             
             if not success:
@@ -720,7 +651,6 @@ class MultiAgentTopologyManager(ABC):
             
             transition_count += 1
         
-                # Translated comment
         print(f"\n⚠️  Reached maximum transitions ({max_transitions})")
         return "Error: Maximum transitions reached", reasoning_log_probs
     
@@ -745,33 +675,24 @@ class MultiAgentTopologyManager(ABC):
         if not self.use_fsm_mode or self.fsm_state_manager is None:
             raise ValueError("FSM mode is not enabled. Call initialize_fsm_from_description() first.")
         
-                # Translated comment
         fsm_manager.reset()
         
-                # Translated comment
         collected_agent_messages = {}
         
-                # Translated comment
-                # Translated comment
         sampled_communication_edges = []
 
-                # Translated comment
         for agent_node in self.agent_execution_nodes.values():
-                        # Translated comment
             try:
                 agent_node.clear_predecessor_messages()
             except Exception:
                 pass
-                        # Translated comment
             try:
                 agent_node.reset_interaction_memory()
             except Exception:
                 pass
-                        # Translated comment
             agent_node.execution_inputs = []
             agent_node.execution_outputs = []
             agent_node.raw_task_inputs = []
-                        # Translated comment
             reasoning_llm = getattr(agent_node, "reasoning_llm", None)
             reasoning_prompt = getattr(agent_node, "reasoning_prompt", None)
             if reasoning_llm is not None and reasoning_prompt is not None:
@@ -780,23 +701,17 @@ class MultiAgentTopologyManager(ABC):
                 except Exception:
                     pass
         
-                # Translated comment
         reasoning_log_probs = torch.tensor(0.0, dtype=torch.float32, requires_grad=True)
         
-                # Translated comment
         reached_max_transitions = False
         
-                # Translated comment
         listener_weights = None
         if enable_comm_sampling:
             listener_weights = fsm_outputs.get("listener_weights")  # [num_states, num_agents]
             if listener_weights is None:
                 raise ValueError("listener_weights not found in fsm_outputs")
         
-                # Translated comment
         if enable_transition_prediction:
-                        # Translated comment
-                        # Translated comment
             use_dynamic_transition = (
                 fsm_tgn is not None
                 and question_embedding is not None
@@ -804,7 +719,6 @@ class MultiAgentTopologyManager(ABC):
                 and context_features is not None
             )
             
-                        # Translated comment
             transition_probs = fsm_outputs.get("transition_probs")  # [num_states] or [num_states, num_states]
             if transition_probs is None:
                 raise ValueError("transition_probs not found in fsm_outputs and cannot compute dynamically")
@@ -812,9 +726,8 @@ class MultiAgentTopologyManager(ABC):
             use_dynamic_transition = False
             transition_probs = None
         
-                # Translated comment
         transition_count = 0
-        last_state_output = None          # Translated comment
+        last_state_output = None
         
         while transition_count < max_transitions:
             current_state = fsm_manager.get_current_state()
@@ -822,10 +735,8 @@ class MultiAgentTopologyManager(ABC):
             if current_state is None:
                 return "Error: No current state", reasoning_log_probs, reached_max_transitions, collected_agent_messages
             
-                        # Translated comment
             agent_node = self.agent_execution_nodes.get(current_state.responsible_agent_id)
 
-                        # Translated comment
             if agent_node:
                 agent_display = f"{current_state.responsible_agent_id} ({agent_node.agent_role})"
             else:
@@ -840,22 +751,15 @@ class MultiAgentTopologyManager(ABC):
             if agent_node is None:
                 return f"Error: Agent {current_state.responsible_agent_id} not found", reasoning_log_probs, reached_max_transitions, collected_agent_messages
             
-                        # Translated comment
             retry_attempts = 0
             output = None
             
             while retry_attempts < max_retry_attempts:
                 try:
-                                        # Translated comment
-                                        # Translated comment
                     if last_state_output is not None:
-                                                # Translated comment
-                                                # Translated comment
                         if current_state.is_final:
-                                                        # Translated comment
                             truncated_prev_output = str(last_state_output)
                         else:
-                                                        # Translated comment
                             MAX_PREVIOUS_OUTPUT_LENGTH = 500
                         truncated_prev_output = str(last_state_output)
                         if len(truncated_prev_output) > MAX_PREVIOUS_OUTPUT_LENGTH:
@@ -877,7 +781,6 @@ class MultiAgentTopologyManager(ABC):
                         timeout=max_execution_time
                     )
                     
-                                        # Translated comment
                     if agent_node.execution_outputs:
                         output = agent_node.execution_outputs[-1]
                     break
@@ -889,17 +792,13 @@ class MultiAgentTopologyManager(ABC):
             if output is None:
                 return "Error: Agent execution failed", reasoning_log_probs, reached_max_transitions, collected_agent_messages
             
-                        # Translated comment
-                        # Translated comment
             if attack_injector is not None and hasattr(attack_injector, 'pollute_message'):
-                                # Translated comment
                 agent_id_str = current_state.responsible_agent_id
                 try:
                     agent_idx = int(agent_id_str.split('_')[-1]) if '_' in agent_id_str else int(agent_id_str)
                 except (ValueError, IndexError):
                     agent_idx = 0
                 
-                                # Translated comment
                 if attack_injector.should_pollute_message(agent_idx):
                     original_output = output
                     output = attack_injector.pollute_message(
@@ -910,10 +809,8 @@ class MultiAgentTopologyManager(ABC):
                     if verbose:
                         print(f"  🔴 Message was polluted (Agent {agent_idx}, attack type: {attack_injector.attack_type})")
             
-                        # Translated comment
             last_state_output = output
             
-                        # Translated comment
             try:
                 agent_id_str = current_state.responsible_agent_id
                 agent_idx = int(agent_id_str.split('_')[-1]) if '_' in agent_id_str else int(agent_id_str)
@@ -924,9 +821,7 @@ class MultiAgentTopologyManager(ABC):
             if verbose:
                 print(f"\n🤖 Agent Output:\n{output[:200]}...")
             
-                        # Translated comment
             if current_state.is_final:
-                                # Translated comment
                 collected_agent_messages['_communication_edges'] = sampled_communication_edges
                 
                 final_answer = fsm_manager.check_final_answer(output)
@@ -935,17 +830,13 @@ class MultiAgentTopologyManager(ABC):
                         print(f"\n✅ Final Answer: {final_answer}")
                     return final_answer, reasoning_log_probs, reached_max_transitions, collected_agent_messages
                 else:
-                                        # Translated comment
                     if verbose:
                         print(f"\n✅ Reached final state, returning output")
                     return output, reasoning_log_probs, reached_max_transitions, collected_agent_messages
             
-                        # Translated comment
             current_state_id = current_state.state_id
 
-                        # Translated comment
             if enable_transition_prediction:
-                                # Translated comment
                 if use_dynamic_transition:
                     num_agents = agent_features.size(0)
                     if num_agents > 1:
@@ -972,7 +863,6 @@ class MultiAgentTopologyManager(ABC):
                 if transition_probs is None:
                     raise ValueError("transition_probs is None (enable_transition_prediction=True)")
 
-                                # Translated comment
                 if transition_probs.dim() == 1:
                     state_transition_probs = transition_probs
                 elif transition_probs.dim() == 2:
@@ -980,7 +870,6 @@ class MultiAgentTopologyManager(ABC):
                 else:
                     raise ValueError(f"Unexpected transition_probs shape: {transition_probs.shape}")
 
-                                # Translated comment
                 initial_state = fsm_manager.get_initial_state()
                 if initial_state is not None and current_state_id == initial_state.state_id:
                     final_state_ids = [
@@ -1001,12 +890,10 @@ class MultiAgentTopologyManager(ABC):
                             if verbose:
                                 print("\n⚠️  Initial-state constraint made all probabilities zero; falling back to the original distribution")
 
-                                # Translated comment
                 if temperature != 1.0:
                     logits = torch.log(state_transition_probs + 1e-8) / temperature
                     state_transition_probs = torch.nn.functional.softmax(logits, dim=-1)
 
-                                # Translated comment
                 probs = state_transition_probs.clone()
                 if current_state_id < probs.size(0):
                     probs[current_state_id] = 0.0
@@ -1015,12 +902,10 @@ class MultiAgentTopologyManager(ABC):
 
                 sampled_next_state_id = torch.multinomial(probs.unsqueeze(0), num_samples=1).item()
 
-                                # Translated comment
                 sampled_prob = probs[sampled_next_state_id]
                 sampled_log_prob = torch.log(sampled_prob + 1e-8)
                 reasoning_log_probs = reasoning_log_probs + sampled_log_prob
             else:
-                                # Translated comment
                 all_state_ids = sorted(list(fsm_manager.states.keys()))
                 if not all_state_ids:
                     return (
@@ -1039,7 +924,6 @@ class MultiAgentTopologyManager(ABC):
                     print("\n📊 Ablation: transition prediction disabled; using fixed state progression")
                     print(f"\n-> Fixed transition: State {current_state_id} -> State {sampled_next_state_id}")
 
-                        # Translated comment
             current_state_name = current_state.state_name if current_state else f"State_{current_state_id}"
             sampled_state_obj = fsm_manager.states.get(sampled_next_state_id)
             sampled_state_name = sampled_state_obj.state_name if sampled_state_obj else f"State_{sampled_next_state_id}"
@@ -1076,7 +960,6 @@ class MultiAgentTopologyManager(ABC):
                     f"→ State {sampled_next_state_id} ({sampled_state_name})"
                 )
 
-                        # Translated comment
             sampled_listeners: List[str] = []
             if enable_comm_sampling:
                 if listener_weights is None:
@@ -1109,12 +992,9 @@ class MultiAgentTopologyManager(ABC):
                 if verbose or phase in ["val", "test"]:
                     print("   📡 Ablation: communication sampling disabled; listener broadcast turned off (0 listeners)")
             
-                        # Translated comment
-                        # Translated comment
             fsm_manager.set_listeners(current_state_id, sampled_listeners)
             
             if sampled_listeners:
-                                # Translated comment
                 listener_display = []
                 for listener_id in sampled_listeners:
                     listener_node = self.agent_execution_nodes.get(listener_id)
@@ -1123,29 +1003,24 @@ class MultiAgentTopologyManager(ABC):
                     else:
                         listener_display.append(listener_id)
                 
-                                # Translated comment
                 if verbose or phase in ["val", "test"]:
                     print(f"   📡 Listeners: {listener_display}")
                 
-                                # Translated comment
-                                # Translated comment
                 current_agent_id = current_state.responsible_agent_id
                 for listener_id in sampled_listeners:
-                    if listener_id != current_agent_id:                      # Translated comment
+                    if listener_id != current_agent_id:
                         sampled_communication_edges.append((current_agent_id, listener_id))
                 
                 for listener_id in sampled_listeners:
                     listener_node = self.agent_execution_nodes.get(listener_id)
                     if listener_node:
-                                                # Translated comment
-                        MAX_MESSAGE_LENGTH = 400                          # Translated comment
+                        MAX_MESSAGE_LENGTH = 400
                         truncated_output = str(output)
                         if len(truncated_output) > MAX_MESSAGE_LENGTH:
                             truncated_output = truncated_output[:MAX_MESSAGE_LENGTH] + "...[truncated]"
                         message = f"\n[Message from {agent_node.agent_role} at State {current_state.state_id}]:\n{truncated_output}\n"
                         listener_node.add_predecessor_message(message)
             
-                        # Translated comment
             success = fsm_manager.transition_to_state(sampled_next_state_id)
             
             if not success:
@@ -1153,9 +1028,6 @@ class MultiAgentTopologyManager(ABC):
                 sampled_state_name = sampled_state_obj.state_name if sampled_state_obj else f"State_{sampled_next_state_id}"
                 if verbose:
                     print(f"⚠️  Unable to transition to state {sampled_next_state_id} ({sampled_state_name}); trying the highest-probability state instead")
-                                # Translated comment
-                                # Translated comment
-                                # Translated comment
                 if enable_transition_prediction:
                     fallback_state_id = torch.argmax(state_transition_probs).item()
                 else:
@@ -1167,8 +1039,6 @@ class MultiAgentTopologyManager(ABC):
             
             transition_count += 1
         
-                # Translated comment
-                # Translated comment
         reached_max_transitions = True
         
         current_state = fsm_manager.get_current_state()
@@ -1177,7 +1047,6 @@ class MultiAgentTopologyManager(ABC):
             print(f"\n⚠️  Reached maximum transitions ({max_transitions})")
             print(f"  📍 Current position: State {current_state.state_id} ({current_state_name})")
 
-                # Translated comment
         final_states = [s for s in fsm_manager.states.values() if s.is_final]
         if not final_states:
             if verbose:
@@ -1188,7 +1057,6 @@ class MultiAgentTopologyManager(ABC):
         print(f"  ⚠️  The final state was not reached within the step limit; forcing a jump to final state {final_state.state_id} ({final_state.state_name})")
         fsm_manager.transition_to_state(final_state.state_id)
         
-                # Translated comment
         agent_node = self.agent_execution_nodes.get(final_state.responsible_agent_id)
         if agent_node is None:
             return f"Error: Final agent {final_state.responsible_agent_id} not found", reasoning_log_probs, reached_max_transitions, collected_agent_messages
@@ -1197,8 +1065,6 @@ class MultiAgentTopologyManager(ABC):
         output = None
         while retry_attempts < max_retry_attempts:
             try:
-                                # Translated comment
-                                # Translated comment
                 if last_state_output is not None:
                     final_input = (
                         f"{task_input}\n\n"
@@ -1227,7 +1093,6 @@ class MultiAgentTopologyManager(ABC):
         clean_output = re.sub(r'<\|[^>]+?\|>', '', output)
         print(f"\n🤖 Final Agent Output:\n{clean_output[:200]}...")
         
-                # Translated comment
         collected_agent_messages['_communication_edges'] = sampled_communication_edges
         
         final_answer = fsm_manager.check_final_answer(output)
@@ -1242,12 +1107,9 @@ class MultiAgentTopologyManager(ABC):
                            training_samples: List[Dict[str, Any]],
                            num_states: int = 4) -> Dict[str, Any]:
         """Translated function documentation."""
-                # Translated comment
-                # Translated comment
         
         agent_ids = list(self.agent_execution_nodes.keys())
         
-                # Translated comment
         fsm_description = {
             'states': [],
             'listeners': {}
@@ -1263,7 +1125,6 @@ class MultiAgentTopologyManager(ABC):
             }
             fsm_description['states'].append(state)
             
-                        # Translated comment
             if i < num_states - 1:
                 fsm_description['listeners'][i] = [agent_ids[i + 1]]
             else:
@@ -1272,5 +1133,4 @@ class MultiAgentTopologyManager(ABC):
         return fsm_description
 
 
-# Translated comment
 __all__ = ['MultiAgentTopologyManager']
