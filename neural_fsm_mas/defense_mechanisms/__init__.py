@@ -1,25 +1,25 @@
 """
 Defense Mechanisms for Neural FSM Multi-Agent System
-神经FSM多智能体系统防御机制 - 简化版
+Defense mechanisms for the Neural FSM multi-agent system - simplified edition
 
-核心组件:
-1. SimplifiedCentralityAnalyzer - 图中心性分析 (BC + PageRank)
-2. SimplifiedAnomalyDetector - 异常检测 (频率 + 语义)
-3. TrustCalculator - 信任分数计算
-4. MessageWeightCalculator - 消息权重计算
-5. ProtectionConstrainedLoss - 保护约束损失
-6. ProtectedTGN - 集成保护的TGN
+Core components:
+1. SimplifiedCentralityAnalyzer - graph centrality analysis (BC + PageRank)
+2. SimplifiedAnomalyDetector - anomaly detection (frequency + semantics)
+3. TrustCalculator - trust score computation
+4. MessageWeightCalculator - message weight computation
+5. ProtectionConstrainedLoss - protection-constrained loss
+6. ProtectedTGN - protection-integrated TGN
 
-核心公式:
-- 保护优先级: π(i) = w_BC · BC(i) + w_PR · PR(i)
-- 异常分数: α(i,t) = λ_freq · α_freq + λ_semantic · α_semantic
-- 信任分数: trust(i,t) = (1 - α(i,t)) · (1 + π(i))
-- 消息权重: w_{i→j} = MLP([trust(i), π(j)])
-- 总损失: L = L_task + λ_protect · L_protect + λ_reg · L_reg
+Core formulas:
+- Protection priority: π(i) = w_BC · BC(i) + w_PR · PR(i)
+- Anomaly score: α(i,t) = λ_freq · α_freq + λ_semantic · α_semantic
+- Trust score: trust(i,t) = (1 - α(i,t)) · (1 + π(i))
+- Message weight: w_{i→j} = MLP([trust(i), π(j)])
+- Total loss: L = L_task + λ_protect · L_protect + λ_reg · L_reg
 
-作者: Neural FSM Team
-日期: 2025-10-28
-版本: 1.0 (简化版)
+Author: Neural FSM Team
+Date: 2025-10-28
+Version: 1.0 (simplified edition)
 """
 
 from .simplified_centrality import (
@@ -65,7 +65,7 @@ from .advanced_attack_injector import (
 
 
 __all__ = [
-    # 核心组件
+    # Core components
     'SimplifiedCentralityAnalyzer',
     'SimplifiedAnomalyDetector',
     'TrustCalculator',
@@ -75,7 +75,7 @@ __all__ = [
     'AdaptiveProtectionLoss',
     'ProtectedTGN',
     
-    # 攻击模拟（高级版）
+    # Attack simulation (advanced edition)
     'AdvancedAttackInjector',
     'AttackConfig',
     'create_frequency_attacker',
@@ -85,7 +85,7 @@ __all__ = [
     'create_selfish_attacker',
     'create_mixed_attacker',
     
-    # 便捷函数
+    # Convenience functions
     'compute_node_priorities',
     'create_anomaly_detector',
     'compute_trust_scores',
