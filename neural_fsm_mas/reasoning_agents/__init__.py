@@ -1,14 +1,14 @@
 """
 Reasoning Agents Module
-推理智能体模块
+Reasoning agents module
 
-包含各种类型的推理智能体实现
+Contains implementations of multiple reasoning agent types
 """
 
 from .agent_factory import ReasoningAgentFactory, ReasoningAgentRegistry
 from .mathematical_reasoning_agent import MathematicalReasoningAgent
 from .analytical_reasoning_agent import AnalyticalReasoningAgent
-from .decision_making_agent import DecisionMakingAgent  # 只从decision_making_agent.py导入
+from .decision_making_agent import DecisionMakingAgent  # Imported only from decision_making_agent.py
 from .code_generation_agent import CodeGenerationAgent
 from .adversarial_reasoning_agent import AdversarialReasoningAgent
 
