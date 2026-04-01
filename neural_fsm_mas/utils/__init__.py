@@ -1,8 +1,8 @@
 """
 Utilities Module
-工具模块
+Utilities module
 
-包含各种实用工具函数
+Contains various utility functions
 """
 
 from .llm_cost_tracker import (
@@ -24,4 +24,3 @@ __all__ = [
     'print_pricing_table',
     'estimate_cost',
 ]
-
