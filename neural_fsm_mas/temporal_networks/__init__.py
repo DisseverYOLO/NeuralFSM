@@ -1,8 +1,8 @@
 """
 Temporal Networks Module
-时间网络模块
+Temporal networks module
 
-包含神经时间图网络的实现
+Contains implementations of neural temporal graph networks
 """
 
 from .neural_temporal_graph import (
