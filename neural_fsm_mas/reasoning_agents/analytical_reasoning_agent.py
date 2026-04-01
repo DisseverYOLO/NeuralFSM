@@ -1,16 +1,16 @@
 """
 Analytical Reasoning Agent
-分析推理智能体
+Analytical reasoning agent
 
-适配自原始AnalyzeAgent实现，专门为MetaAgent项目优化
-支持复杂问题的分析和推理
+Adapted from the original AnalyzeAgent implementation and optimized for the MetaAgent project
+Supports analysis and reasoning for complex problems
 """
 
 from typing import List, Any, Dict
 import sys
 from pathlib import Path
 
-# 添加MetaAgent路径
+# Add MetaAgent path
 sys.path.append(str(Path(__file__).parent.parent.parent))
 sys.path.append(str(Path(__file__).parent.parent))
 
@@ -22,13 +22,13 @@ from baseclass.LLM import LLM
 @ReasoningAgentRegistry.register_agent_type('analytical_reasoning')
 class AnalyticalReasoningAgent(AgentExecutionNode):
     """
-    分析推理智能体
-    
-    专门用于复杂问题的分析和推理，支持：
-    1. 问题分解和结构化分析
-    2. 多角度思考和评估
-    3. 逻辑推理和论证
-    4. 批判性思维和质疑
+    Analytical reasoning agent
+
+    Specialized in analyzing and reasoning about complex problems, supporting:
+    1. Problem decomposition and structured analysis
+    2. Multi-perspective thinking and evaluation
+    3. Logical reasoning and argumentation
+    4. Critical thinking and questioning
     """
     
     def __init__(self, 
@@ -48,7 +48,7 @@ class AnalyticalReasoningAgent(AgentExecutionNode):
         self.enable_critical_thinking = kwargs.get('enable_critical_thinking', True)
     
     def _get_analytical_reasoning_prompt(self) -> str:
-        """获取分析推理的系统提示"""
+        """Get the system prompt for analytical reasoning."""
         return """You are an expert analytical reasoning agent. Your role is to:
 
 1. Break down complex problems into manageable components
@@ -67,7 +67,7 @@ Guidelines:
 - Consider alternative explanations and solutions"""
     
     def _execute_single_reasoning(self, reasoning_context: Dict[str, Any], **execution_kwargs) -> Any:
-        """执行单个分析推理任务"""
+        """Execute a single analytical reasoning task."""
         problem = reasoning_context['problem']
         spatial_context = reasoning_context.get('spatial_context', '')
         temporal_context = reasoning_context.get('temporal_context', '')
@@ -81,7 +81,7 @@ Guidelines:
             return {"error": f"Analytical reasoning failed: {str(e)}", "problem": problem}
     
     def _build_analytical_prompt(self, problem: str, spatial_context: str, temporal_context: str) -> str:
-        """构建分析推理提示"""
+        """Build the analytical reasoning prompt."""
         prompt_parts = [f"Problem for Analysis: {problem}"]
         
         if spatial_context:
@@ -102,7 +102,7 @@ Guidelines:
         return "\n".join(prompt_parts)
     
     def _structure_analysis_result(self, raw_result: str, problem: str) -> Dict[str, Any]:
-        """结构化分析结果"""
+        """Structure the analysis result."""
         return {
             'analysis': raw_result,
             'problem': problem,
@@ -111,5 +111,5 @@ Guidelines:
         }
 
 
-# 导出主要类
+# Export main class
 __all__ = ['AnalyticalReasoningAgent']
