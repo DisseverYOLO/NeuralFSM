@@ -1,7 +1,4 @@
-'''
-Enhanced FSM Generation for Neural Multi-Agent System
-核心改进：Step 3 直接拼接 Step 1 + Step 2，不再调用 LLM 生成
-'''
+
 
 import json
 import re
@@ -15,11 +12,11 @@ from baseclass.LLM import LLM
 
 class EnhancedFSMGenerator:
     """
-    Enhanced FSM Generator - 三步法
+    Enhanced FSM Generator - three-step method
     
-    Step 1: generate_state_plan() - LLM 生成状态规划
-    Step 2: generate_agents_from_states() - LLM 为每个状态生成智能体
-    Step 3: generate_fsm_states() - 直接拼接 Step 1 + Step 2，构建完整 FSM（不调用 LLM）
+    Step 1: generate_state_plan() - LLM generates the state plan
+    Step 2: generate_agents_from_states() - LLM generates one agent for each state
+    Step 3: generate_fsm_states() - directly combine Step 1 + Step 2 to build the full FSM without calling the LLM
     """
     
     def __init__(self, use_azure: bool = False):
@@ -582,7 +579,7 @@ Total states: 8-12"""
     
     def generate_state_plan(self, dataset: str, task_description: Optional[str] = None) -> Tuple[Dict, LLM]:
         """
-        Step 1: 生成状态规划
+        Step 1: Generate the state plan.
         """
         template = self.dataset_templates.get(dataset.lower())
         if not template:
@@ -636,13 +633,13 @@ REQUIREMENTS:
             print(f"✅ Generated workflow plan with {len(state_plan['states'])} states")
             return state_plan, llm
         except Exception as e:
-            print(f"❌ Step 1 失败: {e}")
-            print(f"📄 Response (前500字符): {response[:500]}")
+            print(f"❌ Step 1 failed: {e}")
+            print(f"📄 Response (first 500 characters): {response[:500]}")
             raise
     
     def generate_agents_from_states(self, dataset: str, state_plan: Dict, task_description: Optional[str] = None) -> Tuple[List[Dict], LLM]:
         """
-        Step 2: 为状态生成智能体
+        Step 2: Generate agents from states.
         """
         state_summary = "\n".join([
             f"  {i}. {s['state_name']}: {s['description']}\n     Needs: {', '.join(s['required_capabilities'])}"
@@ -690,27 +687,27 @@ Design agents that can fulfill ALL the capabilities needed across these states.
             print(f"✅ Generated {len(agent_dict)} agents for {len(state_plan['states'])} states")
             return agent_dict, llm
         except Exception as e:
-            print(f"❌ Step 2 失败: {e}")
-            print(f"📄 Response (前500字符): {response[:500]}")
+            print(f"❌ Step 2 failed: {e}")
+            print(f"📄 Response (first 500 characters): {response[:500]}")
             raise
     
     def generate_fsm_states(self, dataset: str, state_plan: Dict, agent_dict: List[Dict], task_description: Optional[str] = None) -> Tuple[Dict, LLM]:
         """
-        Step 3: 直接拼接 Step 1 + Step 2，构建完整 FSM
+        Step 3: Directly combine Step 1 + Step 2 to build the complete FSM.
         
-        ✨ 核心改进：不再调用 LLM，直接根据 state_plan 和 agent_dict 组装 FSM
+        ✨ Core improvement: no longer call the LLM here; assemble the FSM directly from state_plan and agent_dict.
 
-        兼容性说明：
-        - 旧版示例脚本中存在调用 `generate_fsm_states(dataset, agent_dict)` 的用法
-        - 对于这种情况，请在外部先调用 `generate_state_plan` 获取 state_plan，
-          再调用本方法；本训练框架内部只通过 `generate_complete_mas` 使用本方法
+        Compatibility notes:
+        - Older example scripts may call `generate_fsm_states(dataset, agent_dict)`
+        - In that case, call `generate_state_plan` externally to obtain state_plan first,
+          then call this method; internally, this training framework only uses this method via `generate_complete_mas`
         """
         print("📝 Step 3: Assembling FSM from state plan + agents...")
         
-        # 构建 states 列表
+        # Build the states list
         states = []
         for i, state_info in enumerate(state_plan['states']):
-            # 找到对应的 agent
+            # Find the corresponding agent
             agent = agent_dict[i] if i < len(agent_dict) else agent_dict[-1]
             
             state = {
@@ -725,13 +722,13 @@ Design agents that can fulfill ALL the capabilities needed across these states.
             }
             states.append(state)
         
-        # 确保有初始状态和终止状态
+        # Ensure there is an initial state and a final state
         if not any(s['is_initial'] for s in states):
             states[0]['is_initial'] = True
         if not any(s['is_final'] for s in states):
             states[-1]['is_final'] = True
         
-        # 构建 transitions 列表（顺序链式）
+        # Build the transition list (sequential chain)
         transitions = []
         for i in range(len(states) - 1):
             transitions.append({
@@ -741,7 +738,7 @@ Design agents that can fulfill ALL the capabilities needed across these states.
                 "priority": 1
             })
         
-        # 添加错误重试转移
+        # Add retry transitions for errors
         for i in range(1, len(states) - 1):
             transitions.append({
                 "from_state": str(i),
@@ -755,30 +752,30 @@ Design agents that can fulfill ALL the capabilities needed across these states.
             "transitions": transitions
         }
         
-        # 验证 FSM
+        # Validate the FSM
         if self._validate_fsm(fsm, agent_dict):
             print(f"✅ Assembled FSM with {len(states)} states and {len(transitions)} transitions")
-            # 返回 dummy LLM instance（用于统计）
+            # Return a dummy LLM instance (used for accounting)
             dummy_llm = LLM(system_prompt="", use_azure=self.use_azure)
             return fsm, dummy_llm
         else:
             raise ValueError("FSM validation failed")
     
     def _generate_listeners(self, state_idx: int, total_states: int, agent_dict: List[Dict]) -> List[str]:
-        """生成监听者列表"""
+        """Generate the listener list."""
         listeners = []
-        # 前面的状态可以监听
+        # Earlier states can listen
         for j in range(max(0, state_idx - 2), state_idx):
             if j < len(agent_dict):
                 listeners.append(agent_dict[j]['agent_id'])
-        # 后续状态也可以监听（用于广播）
+        # Later states can also listen (for broadcasting)
         for j in range(state_idx + 1, min(state_idx + 3, len(agent_dict))):
             if j < len(agent_dict):
                 listeners.append(agent_dict[j]['agent_id'])
         return listeners
     
     def _validate_fsm(self, fsm: Dict, agent_dict: List[Dict]) -> bool:
-        """验证 FSM 结构"""
+        """Validate the FSM structure."""
         if 'states' not in fsm or 'transitions' not in fsm:
             return False
         
@@ -786,22 +783,22 @@ Design agents that can fulfill ALL the capabilities needed across these states.
         if not states:
             return False
         
-        # 检查初始状态和终止状态
+        # Check the initial and final states
         has_initial = any(s.get('is_initial', False) for s in states)
         has_final = any(s.get('is_final', False) for s in states)
         
         return has_initial and has_final
     
     def _extract_json(self, response: str) -> str:
-        """从 LLM 响应中提取 JSON（鲁棒版本）"""
+        """Extract JSON from an LLM response (robust version)."""
         if not response:
             return ""
         
-        # 检查是否是 HTML 错误页面
+        # Check whether this is an HTML error page
         if response.strip().startswith('<!DOCTYPE') or response.strip().startswith('<html'):
             raise ValueError("LLM API returned HTML error page (likely timeout or server error)")
         
-        # 优先：提取 ```json ... ``` 代码块
+        # First priority: extract a ```json ... ``` code block
         if "```json" in response:
             parts = response.split("```json")
             if len(parts) > 1:
@@ -810,7 +807,7 @@ Design agents that can fulfill ALL the capabilities needed across these states.
                 if json_part:
                     return self._clean_json(json_part)
         
-        # 其次：提取任意 ``` ... ``` 中以 { 或 [ 开头的块
+        # Second priority: extract any ``` ... ``` block starting with { or [
         if "```" in response:
             parts = response.split("```")
             for part in parts:
@@ -818,7 +815,7 @@ Design agents that can fulfill ALL the capabilities needed across these states.
                 if candidate.startswith("{") or candidate.startswith("["):
                     return self._clean_json(candidate)
         
-        # 处理 Python 代码包裹的 JSON（如：def func(): return {...}）
+        # Handle JSON wrapped inside Python code (for example: def func(): return {...})
         python_return_match = re.search(r'return\s*(\{|\[)', response, re.MULTILINE | re.DOTALL)
         if python_return_match:
             start = python_return_match.start() + len('return')
@@ -830,7 +827,7 @@ Design agents that can fulfill ALL the capabilities needed across these states.
                 if json_str:
                     return self._clean_json(json_str)
         
-        # 再次：在全文中查找第一个 { 或 [
+        # Next: search the full text for the first { or [
         text = response.strip()
         if not text:
             return ""
@@ -845,11 +842,11 @@ Design agents that can fulfill ALL the capabilities needed across these states.
             if json_str:
                 return self._clean_json(json_str)
         
-        # 最后兜底
+        # Final fallback
         return self._clean_json(text)
     
     def _extract_balanced_json(self, text: str) -> str:
-        """使用括号匹配提取完整JSON"""
+        """Extract complete JSON using bracket matching."""
         if not text:
             return ""
         
@@ -857,7 +854,7 @@ Design agents that can fulfill ALL the capabilities needed across these states.
         if start_char not in ('{', '['):
             return ""
         
-        # 栈追踪括号匹配
+        # Use a stack to track bracket matching
         stack = [start_char]
         in_string = False
         escape_next = False
@@ -885,7 +882,7 @@ Design agents that can fulfill ALL the capabilities needed across these states.
                 i += 1
                 continue
             
-            # 处理括号
+            # Process brackets
             if char in ('{', '['):
                 stack.append(char)
             elif char == '}':
@@ -897,7 +894,7 @@ Design agents that can fulfill ALL the capabilities needed across these states.
             
             i += 1
         
-        # 验证栈为空且最后字符是闭合括号
+        # Verify the stack is empty and the last character is a closing bracket
         if not stack:
             result = text[:i]
             last_char = result.rstrip()[-1] if result.rstrip() else ''
@@ -907,14 +904,14 @@ Design agents that can fulfill ALL the capabilities needed across these states.
         return ""
     
     def _clean_json(self, json_str: str) -> str:
-        """清理 JSON 字符串中的常见问题"""
+        """Clean common issues in a JSON string."""
         if not json_str:
             return json_str
         
-        # 移除 BOM 和其他不可见字符
+        # Remove BOM and other invisible characters
         json_str = json_str.strip('\ufeff\u200b\u200c\u200d')
         
-        # 移除 // 单行注释
+        # Remove // single-line comments
         lines = json_str.split('\n')
         cleaned_lines = []
         for line in lines:
@@ -923,36 +920,36 @@ Design agents that can fulfill ALL the capabilities needed across these states.
                 if len(parts) > 1:
                     before_comment = parts[0]
                     quote_count = before_comment.count('"') - before_comment.count('\\"')
-                    if quote_count % 2 == 0:  # 引号成对
+                    if quote_count % 2 == 0:  # Quotes are balanced
                         line = parts[0].rstrip()
             cleaned_lines.append(line)
         json_str = '\n'.join(cleaned_lines)
         
-        # 移除尾部逗号
+        # Remove trailing commas
         json_str = re.sub(r',(\s*[}\]])', r'\1', json_str)
         
         return json_str
     
     def generate_complete_mas(self, dataset: str, save_path: Optional[str] = None, task_description: Optional[str] = None) -> Tuple[Dict, float]:
         """
-        完整的三步法生成 MAS
+        Generate a MAS using the full three-step process.
         """
         print(f"🚀 Generating Multi-Agent System for {dataset.upper()}...")
         print("   Using 3-Step Assembly: State Plan → Agents → FSM Assembly ✨")
         
-        # Step 1: 生成状态规划
+        # Step 1: Generate the state plan
         print("\n📝 Step 1: Designing workflow states...")
         state_plan, state_llm = self.generate_state_plan(dataset, task_description)
         
-        # Step 2: 生成智能体
+        # Step 2: Generate agents
         print("\n📝 Step 2: Generating agents for workflow...")
         agent_dict, agent_llm = self.generate_agents_from_states(dataset, state_plan, task_description)
         
-        # Step 3: 组装 FSM（不调用 LLM）
+        # Step 3: Assemble the FSM (without calling the LLM)
         print("\n📝 Step 3: Assembling FSM...")
         fsm, _ = self.generate_fsm_states(dataset, state_plan, agent_dict, task_description)
         
-        # 组装完整系统
+        # Assemble the complete system
         complete_system = {
             "dataset": dataset,
             "agents": agent_dict,
@@ -964,7 +961,7 @@ Design agents that can fulfill ALL the capabilities needed across these states.
             }
         }
         
-        # 计算成本（只有 Step 1 和 Step 2 调用了 LLM）
+        # Compute the cost (only Step 1 and Step 2 called the LLM)
         state_usage = state_llm.get_token_usage()
         agent_usage = agent_llm.get_token_usage()
         
@@ -976,7 +973,7 @@ Design agents that can fulfill ALL the capabilities needed across these states.
         agent_cost = agent_llm.calculate_cost_usd()
         total_cost_usd = state_cost + agent_cost
         
-        # 保存
+        # Save
         if save_path:
             with open(save_path, 'w', encoding='utf-8') as f:
                 json.dump(complete_system, f, indent=2, ensure_ascii=False)
@@ -999,9 +996,9 @@ def generate_enhanced_mas(dataset: str,
                           use_azure: bool = False,
                           task_description: Optional[str] = None) -> Tuple[Dict, float]:
     """
-    兼容原有示例脚本的辅助函数：
-    - 封装 EnhancedFSMGenerator.generate_complete_mas
-    - 被 generate_enhanced_mas_examples.py 等脚本直接调用
+    Compatibility helper for existing example scripts:
+    - Wraps EnhancedFSMGenerator.generate_complete_mas
+    - Called directly by scripts such as generate_enhanced_mas_examples.py
     """
     generator = EnhancedFSMGenerator(use_azure=use_azure)
     system, cost = generator.generate_complete_mas(
