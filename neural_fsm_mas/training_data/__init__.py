@@ -1,8 +1,8 @@
 """
 Training Data Module
-训练数据模块
+Training data module
 
-包含数据处理和准备功能
+Contains data processing and preparation utilities
 """
 
 from .mmlu_data_processor import (
@@ -21,15 +21,15 @@ from .answer_validator import (
 )
 
 __all__ = [
-    # MMLU处理器（兼容旧代码）
+    # MMLU processor (compatible with legacy code)
     'MMLUDataProcessor',
     'create_mmlu_processor',
     'prepare_mmlu_training_data',
     
-    # ✨ 统一数据处理器（支持所有6个数据集）
+    # ✨ Unified data processor (supports all 6 datasets)
     'UnifiedDataProcessor',
     
-    # ✨ 答案验证器（支持所有6个数据集）
+    # ✨ Answer validator (supports all 6 datasets)
     'AnswerValidator',
     'create_answer_validator'
 ]
