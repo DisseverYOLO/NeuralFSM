@@ -17,7 +17,7 @@ except:
 try:
     from tools import TOOL_MAPPING
 except ImportError:
-    # 如果tools模块不存在，创建一个简单的映射
+    # If the tools module does not exist, create a simple mapping
     TOOL_MAPPING = {
         'execute_code': lambda code: f"Executed: {code[:50]}..."
     }
@@ -58,7 +58,7 @@ class MultiAgentSystem:
     <\\file_write>
     '''
         self.running_log = ""
-        self.current_state_id = None  # 添加当前状态id
+        self.current_state_id = None  # Add current state ID
 
     def reset(self):
         self.llms = {}
@@ -121,13 +121,13 @@ class MultiAgentSystem:
     def run_agent(self, state_id, input_data=None, max_transitions=10, transition_count=0, ini_flag=0):
         # get the current state and agent
         self.running_log += f"\n\n\nCurrent state id: {state_id}\n"
-        self.current_state_id = state_id  # 更新当前状态id
-        self.write_current_state()  # 写入当前状态id
-        self.write_log()  # 自动保存日志
+        self.current_state_id = state_id  # Update current state ID
+        self.write_current_state()  # Write current state ID
+        self.write_log()  # Automatically save logs
         state = self.states[state_id]
         agent = self.agents[state['agent_id']]
         self.running_log += f"\n\n\nCurrent agent: {agent['name']}\n"
-        self.write_log()  # 自动保存日志
+        self.write_log()  # Automatically save logs
         llm = self.llms[agent['agent_id']]
         if state['is_initial'] and ini_flag == 0:
             instruction = state['instruction'] + "The user input is:\n" + input_data
@@ -136,7 +136,7 @@ class MultiAgentSystem:
         elif ini_flag == 0:
             instruction = state['instruction']
         self.running_log += f"\n\n\nCurrent instruction: {instruction}\n"
-        self.write_log()  # 自动保存日志
+        self.write_log()  # Automatically save logs
         instruction += "Add <STATE_TRANS>: <fill in id> after complete the task and make sure the tool is executed successfully"
         if "code_interpreter" in agent['tools']:
             instruction +="- code_interpreter: Use it with <execute>```python <Your Code> ```<\\execute>. and you will got the stdout or error message\n WARNING: 1. Thses enironment is not a jupyter notebook. Please use print(df.head()) or print(x) instead of direct use df.head() or x, other jupyer outputs  also need print out. 2. Put the code you want to execute in one snippet"
@@ -153,9 +153,9 @@ class MultiAgentSystem:
                 output = " "
             if "<|submit|>" in output or state['is_final']:
                 self.running_log += f"\n\n\n<|completed|>\nComplete final state. Task completed, result is:\n {output}\n"
-                self.current_state_id = None  # 测试完成，清空当前状态
-                self.write_current_state()  # 写入当前状态
-                self.write_log()  # 自动保存日志
+                self.current_state_id = None  # Testing completed, clear current state
+                self.write_current_state()  # Write current state
+                self.write_log()  # Automatically save logs
                 try:
                     return output.split("<|submit|>")[1]
                 except:
@@ -169,19 +169,19 @@ class MultiAgentSystem:
                 result = self.codeinterpreter(action)
                 instruction = f"Action result is :\n {result}\n(notice: If the result for a code is blank, make sure you use print(x) to print the result, notice you can not use direct x to get the result) If the result is synax error, consider use \' instead of  \" , After completed current step task, please use <STATE_TRANS>: <fill in states id>  and pass necessary information to next agent"
                 self.running_log += f"\n\n\nAction result is :\n {result}\n"
-                self.write_log()  # 自动保存日志
-                self.current_state_id = state_id  # 保持当前状态id不变
-                self.write_current_state()  # 写入当前状态id
+                self.write_log()  # Automatically save logs
+                self.current_state_id = state_id  # Keep the current state ID unchanged
+                self.write_current_state()  # Write current state ID
                 conversation_count += 1
-                self.write_log()  # 自动保存日志
+                self.write_log()  # Automatically save logs
                 continue
             if next_state_id:
                 self.running_log += f"\n\n\nTransition to next state: {next_state_id}\n"
-                self.write_log()  # 自动保存日志
-                self.current_state_id = next_state_id  # 更新当前状态id
-                self.write_current_state()  # 写入当前状态id
+                self.write_log()  # Automatically save logs
+                self.current_state_id = next_state_id  # Update current state ID
+                self.write_current_state()  # Write current state ID
                 transition_count += 1
-                self.write_log()  # 自动保存日志
+                self.write_log()  # Automatically save logs
                 if transition_count >= max_transitions:
                     return output
                 info = self.extract_info(output)
@@ -192,7 +192,7 @@ class MultiAgentSystem:
             else:
                 instruction = "After completed current step task, please use <STATE_TRANS>: <fill in states id> "
                 self.running_log += f"\n\n\nNo next state detected, instruction updated to: {instruction}\n"
-                self.write_log()  # 自动保存日志
+                self.write_log()  # Automatically save logs
             conversation_count += 1
             # What about Memroy? Any Method to arrange the memory? sometimes too long. 
             # Maybe we can use the tool to clear the memory?
@@ -225,7 +225,7 @@ class MultiAgentSystem:
                     file_path_content = file_write.split("CONTENT:", 1)
                     if len(file_path_content) == 2:
                         file_path = file_path_content[0].split("FILE_PATH:")[-1].strip()
-                        file_content = file_path_content[1].rstrip()  # 使用 rstrip() 去掉结尾的换行符
+                        file_content = file_path_content[1].rstrip()  # Use rstrip() to remove the trailing newline
                         with open(file_path, "w") as f:
                             f.write(file_content)
                 action = None
@@ -248,22 +248,22 @@ class MultiAgentSystem:
         return cls(data['agents'], data['states'])
 
     def start(self, user_input, max_transitions=10):
-        # 重置运行日志
+        # Reset the running log
         self.running_log = ""
-        # 清空之前的日志文件
+        # Clear the previous log file
         self.clear_log()
         
-        # 记录任务开始前的token消耗
+        # Record token usage before the task starts
         initial_costs = {agent_id: llm.get_token_cost() for agent_id, llm in self.llms.items()}
         
         initial_state = [state for state in self.states.values() if state['is_initial']][0]
         self.running_log += f"Task to be solved:\n{user_input}\n"
-        self.write_log()  # 自动保存日志
+        self.write_log()  # Automatically save logs
         
-        # 运行任务
+        # Run the task
         result = self.run_agent(initial_state['state_id'], user_input, max_transitions)
         
-        # 计算总成本 (任务结束后的成本 - 开始前的成本)
+        # Compute total cost (cost after task completion - cost before start)
         total_cost = 0
         for agent_id, llm in self.llms.items():
             final_cost = llm.get_token_cost()
@@ -301,22 +301,22 @@ class MultiAgentSystem:
 
     def write_log(self):
         """
-        自动将当前的运行日志保存到 running_log.log 文件中
+        Automatically save the current running log to running_log.log
         """
         log_path = os.path.join('..', 'workspace', 'running_log.log')
         try:
             with open(log_path, 'w', encoding='utf-8') as f:
                 f.write(self.running_log)
         except Exception as e:
-            print(f'写入日志时出错: {e}')
+            print(f'Error writing log: {e}')
 
     def clear_log(self):
         """
-        清空 running_log.log 文件内容
+        Clear the contents of running_log.log
         """
         log_path = os.path.join('..', 'workspace', 'running_log.log')
         try:
             with open(log_path, 'w', encoding='utf-8') as f:
                 f.write('')
         except Exception as e:
-            print(f'清空日志时出错: {e}')
+            print(f'Error clearing log: {e}')
