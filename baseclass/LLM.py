@@ -30,7 +30,7 @@ class LLM():
     def __init__(self, system_prompt="You are a helpful assistant", use_azure=False):
         _ensure_api_env_from_config()
         self.use_azure = use_azure
-        # 允许通过环境变量统一控制默认模型（例如由实验脚本设置）
+        # Allow the default model to be controlled uniformly through environment variables (for example, set by experiment scripts)
         self.default_model = os.getenv("NEURALFSM_LLM_MODEL", "gpt-5-nano")
         if self.use_azure:
             self.client = AzureOpenAI(
@@ -41,21 +41,21 @@ class LLM():
         else:
             self.client = OpenAI(
                 api_key=os.getenv("OPENAI_API_KEY"),
-                base_url=os.getenv("OPENAI_API_BASE")  # 启用 OpenRouter API 支持
+                base_url=os.getenv("OPENAI_API_BASE")  # Enable OpenRouter API support
             )
         self.messages = [{"role": "system", "content": system_prompt}]
         self.system_prompt = system_prompt
         self.token_cost = 0
-        # 分别追踪 input 和 output tokens
+        # Track input and output tokens separately
         self.total_input_tokens = 0
         self.total_output_tokens = 0
 
     def chat(self, message, temperature=0.1, model=None):
-        # 如果未显式指定模型，则使用实例的默认模型
+        # Use the instance default model if no model is explicitly specified
         model = model or self.default_model
         self.messages.append({"role": "user", "content": message})
         
-        # ✨ 某些模型不支持 temperature 参数，需要特殊处理
+        # ✨ Some models do not support the temperature parameter and need special handling
         models_no_temp = ['gpt-5-nano', 'o1-mini', 'o1-preview', 'o1']
         skip_temp = any(m in model.lower() for m in models_no_temp)
         
@@ -94,21 +94,21 @@ class LLM():
         rsp = response.choices[0].message.content
         self.messages.append({"role": "assistant", "content": rsp})
 
-        # 统计本次调用的token使用情况
+        # Collect token usage statistics for this call
         input_tokens = 0
         output_tokens = 0
         usage = getattr(response, "usage", None)
-        # ✨ 调试：打印usage对象类型
+        # ✨ Debug: print the type of the usage object
         # print(f"    [DEBUG] response.usage type: {type(usage)}, value: {usage}")
         if usage is not None:
             input_tokens = getattr(usage, "prompt_tokens", 0) or 0
-            # OpenAI SDK 有时使用 "completion_tokens" 或 "completion_tokens"
+            # The OpenAI SDK may use "completion_tokens"
             output_tokens = getattr(usage, "completion_tokens", 0) or getattr(usage, "completion_tokens", 0) or 0
             self.token_cost += (input_tokens + output_tokens)
             self.total_input_tokens += input_tokens
             self.total_output_tokens += output_tokens
 
-            # 将实际token用量写入全局LLM成本追踪器（如果已配置）
+            # Write actual token usage into the global LLM cost tracker (if configured)
             try:
                 from neural_fsm_mas.utils.llm_cost_tracker import get_global_cost_tracker
                 tracker = get_global_cost_tracker()
@@ -118,11 +118,11 @@ class LLM():
                         output_tokens=output_tokens,
                         model_name=model,
                     )
-                    # ✨ 调试信息：确认成本被正确追踪
+                    # ✨ Debug info: confirm the cost is tracked correctly
                     # print(f"    💵 [CostTracker] {model}: {input_tokens}+{output_tokens} tokens = ${cost:.6f}")
             except Exception as e:
-                # 成本追踪失败不应影响主逻辑
-                # print(f"    ⚠️  成本追踪失败: {e}")
+                # Cost tracking failure should not affect the main logic
+                # print(f"    ⚠️  Cost tracking failed: {e}")
                 pass
 
         return rsp
@@ -140,7 +140,7 @@ class LLM():
         return self.token_cost
     
     def get_token_usage(self):
-        """获取详细的 token 使用统计"""
+        """Get detailed token usage statistics."""
         return {
             'total_tokens': self.token_cost,
             'input_tokens': self.total_input_tokens,
@@ -148,7 +148,7 @@ class LLM():
         }
     
     def calculate_cost_usd(self, model_name=None):
-        """根据实际使用的 tokens 和模型计算 USD 成本"""
+        """Calculate USD cost based on actual token usage and model."""
         if model_name is None:
             model_name = self.default_model
         
@@ -157,8 +157,8 @@ class LLM():
             pricing = LLMPricingRegistry.get_pricing(model_name)
             return pricing.calculate_cost(self.total_input_tokens, self.total_output_tokens)
         except Exception:
-            # 如果无法获取定价，使用 gpt-5-nano 作为默认估算
-            input_cost = (self.total_input_tokens / 1000.0) * 0.00015
+            # If pricing cannot be retrieved, use gpt-5-nano as the default estimate
+        input_cost = (self.total_input_tokens / 1000.0) * 0.00015
             output_cost = (self.total_output_tokens / 1000.0) * 0.0006
             return input_cost + output_cost
 
