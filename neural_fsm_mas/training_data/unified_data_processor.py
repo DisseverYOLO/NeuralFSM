@@ -1,9 +1,3 @@
-"""
-统一数据处理器
-Unified Data Processor for MMLU, GSM8K, and HumanEval
-
-支持所有数据集的统一接口，用于训练TGN网络
-"""
 
 import json
 import pandas as pd
@@ -14,28 +8,16 @@ import random
 
 
 class UnifiedDataProcessor:
-    """
-    统一数据处理器
-    
-    功能：
-    1. 加载MMLU、GSM8K、HumanEval数据集
-    2. 统一数据格式
-    3. 创建训练/验证/测试分割
-    4. 为多智能体系统准备数据
-    """
     
     def __init__(self, dataset_root: str = "./datasets"):
         self.dataset_root = Path(dataset_root)
         self.processed_data = {}
         self.domain_splits = {}
-        # ✨ GAIA: 运行期可由训练器设置（1/2/3），用于按难度过滤
         self.gaia_level: Optional[int] = None
         
-        # MMLU学科分类
         self.mmlu_categories = self._define_mmlu_categories()
     
     def _define_mmlu_categories(self) -> Dict[str, List[str]]:
-        """定义MMLU学科分类"""
         return {
             "STEM": [
                 "abstract_algebra", "anatomy", "astronomy", "college_biology",
@@ -60,16 +42,6 @@ class UnifiedDataProcessor:
         }
     
     def load_dataset(self, domain: str, split: str = "test") -> List[Dict[str, Any]]:
-        """
-        加载指定领域的数据集
-        
-        Args:
-            domain: 'mmlu', 'gsm8k', 'humaneval', 'hotpotqa', 'alfworld', 'math', 'mbpp', 'gpqa', 'gaia'
-            split: 'train', 'test', 'val', 'dev'
-        
-        Returns:
-            统一格式的数据列表
-        """
         if domain == 'mmlu':
             return self._load_mmlu(split)
         elif domain == 'gsm8k':
@@ -90,17 +62,6 @@ class UnifiedDataProcessor:
             raise ValueError(f"Unknown domain: {domain}. Supported: mmlu, gsm8k, humaneval, hotpotqa, alfworld, math, mbpp, gpqa, gaia")
 
     def _load_gpqa(self, split: str = "train") -> List[Dict[str, Any]]:
-        """
-        加载 GPQA Diamond 数据集（选择题）
-
-        预期文件:
-          datasets/gpqa/gpqa_diamond.jsonl
-
-        字段约定（jsonl每行）:
-          - task_id: int
-          - question: str（包含选项 A/B/C/D）
-          - answer: str（'A'/'B'/'C'/'D'）
-        """
         gpqa_file = self.dataset_root / "gpqa" / "gpqa_diamond.jsonl"
         if not gpqa_file.exists():
             raise FileNotFoundError(f"GPQA data not found: {gpqa_file}")
@@ -118,7 +79,6 @@ class UnifiedDataProcessor:
 
                 q = item_raw.get("question", "")
                 a = str(item_raw.get("answer", "")).strip().upper()
-                # 统一为 A/B/C/D
                 if a and a[0] in "ABCD":
                     a = a[0]
 
@@ -136,25 +96,6 @@ class UnifiedDataProcessor:
         return all_data
 
     def _load_gaia(self, split: str = "train") -> List[Dict[str, Any]]:
-        """
-        加载 GAIA 数据集（Level 1/2/3）。
-
-        GAIA 官方数据通常托管在 HuggingFace 数据集仓库，并且验证集包含公开答案。
-        由于仓库可能需要登录/同意条款，本项目采用本地落盘方式读取：
-
-        预期目录：
-          datasets/gaia/
-
-        支持两种本地格式（任选其一）：
-        1) JSONL（推荐，便于训练管线复用）：
-           - gaia_level1.jsonl / gaia_level2.jsonl / gaia_level3.jsonl
-           每行字段建议包含：question, answer, level, file_path(可选)
-        2) Parquet（来自HF仓库验证集）：
-           - metadata.level1.parquet / metadata.level2.parquet / metadata.level3.parquet
-
-        运行期过滤：
-          self.gaia_level = 1/2/3 时，只加载对应 level；否则合并 1-3。
-        """
         gaia_dir = self.dataset_root / "gaia"
         if not gaia_dir.exists():
             raise FileNotFoundError(f"GAIA data dir not found: {gaia_dir}")
@@ -178,7 +119,6 @@ class UnifiedDataProcessor:
                 "full_question": q,
             }
 
-        # 优先读取 JSONL（无需额外依赖）
         jsonl_loaded = False
         for level in levels:
             jsonl_path = gaia_dir / f"gaia_level{level}.jsonl"
@@ -202,7 +142,6 @@ class UnifiedDataProcessor:
         if jsonl_loaded:
             return all_data
 
-        # 回退：读取 Parquet（需要 pyarrow）
         try:
             import pandas as _pd  # noqa: F401
         except Exception as e:
@@ -221,7 +160,6 @@ class UnifiedDataProcessor:
                 raise RuntimeError(f"Failed to read GAIA parquet: {parquet_path}. "
                                    f"Consider installing pyarrow or converting to jsonl.") from e
 
-            # 常见列名（GAIA仓库字段可能为 Question/Final answer/file_path）
             q_col = "Question" if "Question" in df.columns else ("question" if "question" in df.columns else None)
             a_col = "Final answer" if "Final answer" in df.columns else (
                 "answer" if "answer" in df.columns else ("Answer" if "Answer" in df.columns else None)
@@ -246,16 +184,6 @@ class UnifiedDataProcessor:
         return all_data
     
     def _load_mmlu(self, split: str = "test", samples_per_subject: Optional[int] = None) -> List[Dict[str, Any]]:
-        """
-        加载MMLU数据集
-        
-        Args:
-            split: 数据集分割 ('dev', 'val', 'test', 'auxiliary_train')
-            samples_per_subject: 每个学科采样的问题数量，None表示加载全部
-        
-        Returns:
-            统一格式的数据列表
-        """
         data_dir = self.dataset_root / "mmlu" / "data" / split
         
         if not data_dir.exists():
@@ -263,7 +191,6 @@ class UnifiedDataProcessor:
         
         all_data = []
         
-        # 按学科组织数据
         by_subject = {}
         
         for csv_file in data_dir.glob("*.csv"):
@@ -273,7 +200,6 @@ class UnifiedDataProcessor:
             
             subject_data = []
             for _, row in df.iterrows():
-                # 统一格式
                 item = {
                     'domain': 'mmlu',
                     'subject': subject,
@@ -281,7 +207,6 @@ class UnifiedDataProcessor:
                     'choices': [row[1], row[2], row[3], row[4]],
                     'answer': row[5],  # A/B/C/D
                     'split': split,
-                    # 构建完整问题文本
                     'full_question': f"{row[0]}\nA. {row[1]}\nB. {row[2]}\nC. {row[3]}\nD. {row[4]}",
                     'category': self._get_mmlu_category(subject)
                 }
@@ -289,7 +214,6 @@ class UnifiedDataProcessor:
             
             by_subject[subject] = subject_data
         
-        # ✨ 如果指定了每个学科的采样数量，进行随机采样
         if samples_per_subject is not None:
             for subject, items in by_subject.items():
                 if len(items) > samples_per_subject:
@@ -297,7 +221,7 @@ class UnifiedDataProcessor:
                     all_data.extend(sampled)
                 else:
                     all_data.extend(items)
-                print(f"  📚 {subject}: {min(len(items), samples_per_subject)}/{len(items)} 问题")
+                print(f"  📚 {subject}: {min(len(items), samples_per_subject)}/{len(items)} translated")
         else:
             for items in by_subject.values():
                 all_data.extend(items)
@@ -305,19 +229,12 @@ class UnifiedDataProcessor:
         return all_data
     
     def _get_mmlu_category(self, subject: str) -> str:
-        """获取MMLU学科类别"""
         for category, subjects in self.mmlu_categories.items():
             if subject in subjects:
                 return category
         return "Other"
     
     def _load_gsm8k(self, split: str = "train") -> List[Dict[str, Any]]:
-        """
-        加载GSM8K数据集
-        
-        注意: GSM8K答案格式为 "推理过程\n#### 最终答案"
-        需要保留完整答案（包含推理过程）用于训练，提取最终答案用于验证
-        """
         gsm8k_file = self.dataset_root / "gsm8k" / "gsm8k.jsonl"
         
         if not gsm8k_file.exists():
@@ -328,31 +245,26 @@ class UnifiedDataProcessor:
         with open(gsm8k_file, 'r', encoding='utf-8') as f:
             for line in f:
                 line = line.strip()
-                # 跳过空行，避免 json.loads("") 报错
                 if not line:
                     continue
                 
                 try:
                     item_raw = json.loads(line)
                 except json.JSONDecodeError as e:
-                    # 数据集中可能存在格式异常的行，这里跳过并给出提示，但不中断整个训练
                     print(f"⚠️  Skipping invalid GSM8K JSON line: {e}")
                     continue
                 
-                # 验证必需字段
                 if 'question' not in item_raw or 'answer' not in item_raw:
-                    continue  # 跳过不完整的数据
+                    continue
                 
-                # 提取最终答案（用于验证）
                 answer_text = item_raw['answer']
                 final_answer = answer_text.split('####')[-1].strip() if '####' in answer_text else answer_text
                 
-                # 统一格式
                 item = {
                     'domain': 'gsm8k',
                     'question': item_raw['question'],
-                    'answer': final_answer,  # 最终答案（用于验证）
-                    'full_answer': answer_text,  # 完整答案（包含推理过程，用于训练）
+                    'answer': final_answer,
+                    'full_answer': answer_text,
                     'split': split,
                     'category': 'Mathematics'
                 }
@@ -361,12 +273,6 @@ class UnifiedDataProcessor:
         return all_data
     
     def _load_humaneval(self, split: str = "test") -> List[Dict[str, Any]]:
-        """
-        加载HumanEval数据集
-        
-        注意: HumanEval数据集通常用于测试，所有数据都包含测试代码
-        分割时确保测试代码完整
-        """
         humaneval_file = self.dataset_root / "humaneval" / "humaneval-py.jsonl"
         
         if not humaneval_file.exists():
@@ -378,18 +284,16 @@ class UnifiedDataProcessor:
             for line in f:
                 item_raw = json.loads(line.strip())
                 
-                # 验证必需字段
                 if 'prompt' not in item_raw or 'test' not in item_raw:
-                    continue  # 跳过不完整的数据
+                    continue
                 
-                # 统一格式
                 item = {
                     'domain': 'humaneval',
                     'task_name': item_raw['name'],
-                    'question': item_raw['prompt'],  # 代码提示
-                    'answer': item_raw.get('entry_point', ''),  # 函数名
-                    'test_code': item_raw.get('test', ''),  # ✨ 测试代码（必需）
-                    'entry_point': item_raw.get('entry_point', ''),  # ✨ 函数入口点
+                    'question': item_raw['prompt'],
+                    'answer': item_raw.get('entry_point', ''),
+                    'test_code': item_raw.get('test', ''),
+                    'entry_point': item_raw.get('entry_point', ''),
                     'language': item_raw.get('language', 'python'),
                     'split': split,
                     'category': 'Code Generation'
@@ -399,8 +303,6 @@ class UnifiedDataProcessor:
         return all_data
     
     def _load_hotpotqa(self, split: str = "test") -> List[Dict[str, Any]]:
-        """加载HotpotQA数据集"""
-        # 导入数据集加载器（使用importlib避免与HuggingFace datasets包冲突）
         import importlib.util
         from pathlib import Path
         
@@ -420,17 +322,14 @@ class UnifiedDataProcessor:
         if not hotpotqa_file.exists():
             raise FileNotFoundError(f"HotpotQA data not found: {hotpotqa_file}")
         
-        # 使用数据集加载器
         dataset = HotpotQADataset(str(hotpotqa_file))
         dataset.load_data()
         
-        # ✨ 如果请求 'all'，直接返回所有原始数据（用于外部划分）
         if split == 'all':
             raw_data = dataset.data
         else:
-            # 获取分割（按难度分层采样）
             train_data, val_data, test_data = dataset.get_train_test_split(
-                stratify_by_difficulty=True  # ✨ 按难度分层
+                stratify_by_difficulty=True
             )
             
             split_map = {
@@ -441,10 +340,8 @@ class UnifiedDataProcessor:
             
             raw_data = split_map.get(split, test_data)
         
-        # 转换为统一格式
         all_data = []
         for item_raw in raw_data:
-            # 格式化上下文
             context_text = dataset.format_context(item_raw, max_docs=10)
             
             item = {
@@ -464,8 +361,6 @@ class UnifiedDataProcessor:
         return all_data
     
     def _load_alfworld(self, split: str = "test") -> List[Dict[str, Any]]:
-        """加载ALFWorld数据集"""
-        # 导入数据集加载器（使用importlib避免与HuggingFace datasets包冲突）
         import importlib.util
         from pathlib import Path
         
@@ -485,13 +380,11 @@ class UnifiedDataProcessor:
         if not alfworld_file.exists():
             raise FileNotFoundError(f"ALFWorld data not found: {alfworld_file}")
         
-        # 使用数据集加载器
         dataset = ALFWorldDataset(str(alfworld_file))
         dataset.load_data()
         
-        # 获取分割（按难度分层采样）
         train_data, val_data, test_data = dataset.get_train_test_split(
-            stratify_by_difficulty=True  # ✨ 按难度分层
+            stratify_by_difficulty=True
         )
         
         split_map = {
@@ -502,7 +395,6 @@ class UnifiedDataProcessor:
         
         raw_data = split_map.get(split, test_data)
         
-        # 转换为统一格式
         all_data = []
         for item_raw in raw_data:
             item = {
@@ -513,8 +405,8 @@ class UnifiedDataProcessor:
                 'task_description': dataset.get_task_description(item_raw),
                 'split': split,
                 'category': 'Embodied AI',
-                'question': item_raw['goal'],  # 使用goal作为question
-                'answer': item_raw['goal'],  # 目标本身就是答案
+                'question': item_raw['goal'],
+                'answer': item_raw['goal'],
                 'full_question': dataset.format_for_llm(item_raw, include_subgoals=False)
             }
             all_data.append(item)
@@ -522,17 +414,6 @@ class UnifiedDataProcessor:
         return all_data
     
     def _load_mbpp(self) -> List[Dict[str, Any]]:
-        """
-        加载MBPP数据集
-        
-        数据格式：
-        {
-            "text": "问题描述",
-            "code": "参考代码",
-            "test_list": ["assert ...", ...],
-            "task_id": 123
-        }
-        """
         mbpp_file = self.dataset_root / "mbpp" / "mbpp.jsonl"
         
         if not mbpp_file.exists():
@@ -546,11 +427,8 @@ class UnifiedDataProcessor:
                 except json.JSONDecodeError:
                     continue
                     
-        # 转换为统一格式
         all_data = []
         for item_raw in raw_data:
-            # 构建 prompt
-            # MBPP 需要根据 text 生成代码，test_list 用于验证
             prompt = f"""Task: {item_raw['text']}
             
 Please write a Python function to solve this problem.
@@ -567,7 +445,7 @@ Your code:
                 'test_list': item_raw['test_list'],
                 'task_id': item_raw.get('task_id'),
                 'category': 'Python Coding',
-                'answer': item_raw['code'],  # 参考答案
+                'answer': item_raw['code'],
                 'full_question': prompt
             }
             all_data.append(item)
@@ -575,13 +453,6 @@ Your code:
         return all_data
 
     def _load_math(self, split: str = "train") -> List[Dict[str, Any]]:
-        """
-        加载MATH数据集
-        
-        注意：对于小数据集（如80条），直接返回所有数据，由create_domain_splits统一划分
-        这样可以避免分层采样导致某些subject的验证/测试集过小或为空
-        """
-        # 导入数据集加载器（使用importlib避免与HuggingFace datasets包冲突）
         import importlib.util
         from pathlib import Path
         
@@ -601,16 +472,11 @@ Your code:
         if not math_file.exists():
             raise FileNotFoundError(f"MATH data not found: {math_file}")
         
-        # 使用数据集加载器
         dataset = MATHDataset(str(math_file))
         dataset.load_data()
         
-        # ✨ 直接返回所有原始数据，不进行预划分
-        # 由create_domain_splits统一进行简单随机划分（类似GSM8k）
-        # 这样可以避免小数据集分层采样导致验证/测试集过小的问题
         raw_data = dataset.data
         
-        # 转换为统一格式
         all_data = []
         for item_raw in raw_data:
             item = {
@@ -623,7 +489,7 @@ Your code:
                 'unique_id': item_raw.get('unique_id', ''),
                 'split': split,
                 'category': item_raw.get('subject', 'Mathematics'),
-                'question': item_raw['problem'],  # 问题文本
+                'question': item_raw['problem'],
                 'full_question': dataset.format_for_llm(item_raw, include_solution=False)
             }
             all_data.append(item)
@@ -636,44 +502,25 @@ Your code:
                             val_ratio: float = 0.15,
                             test_ratio: float = 0.15,
                             random_seed: int = 42) -> Dict[str, List[Dict]]:
-        """
-        为指定领域创建训练/验证/测试分割
-        
-        Args:
-            domain: 数据集名称
-            train_ratio: 训练集比例
-            val_ratio: 验证集比例
-            test_ratio: 测试集比例
-            random_seed: 随机种子
-        
-        Returns:
-            包含train/val/test的字典
-        """
         random.seed(random_seed)
         
-        # 加载完整数据
         if domain == 'mmlu':
-            # ✨ MMLU特殊处理：使用dev作为训练集，test作为测试集，不使用验证集
-            # 每个学科随机采样3个问题
-            print("🔹 MMLU数据集加载配置：")
-            print("  训练集：从 dev/ 中每个学科随机采样 3 个问题 (约171个)")
-            print("  验证集：不使用（跳过验证阶段）")
-            print("  测试集：从 test/ 中每个学科随机采样 3 个问题 (约171个)")
+            print("🔹 MMLUtranslated：")
+            print("  translated：translated dev/ translated 3 translated (translated171translated)")
+            print("  translated：translated（translated）")
+            print("  translated：translated test/ translated 3 translated (translated171translated)")
             
             splits = {
                 'train': self._load_mmlu('dev', samples_per_subject=3),
-                'val': [],  # 不使用验证集
+                'val': [],
                 'test': self._load_mmlu('test', samples_per_subject=3)
             }
         elif domain == 'alfworld':
-            # ✨ ALFWorld特殊处理：只加载一次，然后手动划分为训练集和测试集
-            # 不使用验证集，70%训练，30%测试
-            print("🔹 ALFWorld数据集加载配置：")
-            print("  数据源：datasets/alfworld/test.jsonl")
-            print("  划分方式：简单随机划分（70% 训练，30% 测试）")
-            print("  ✅ 验证集：不使用（验证批次 = 0）")
+            print("🔹 ALFWorldtranslated：")
+            print("  translated：datasets/alfworld/test.jsonl")
+            print("  translated：translated（70% translated，30% translated）")
+            print("  ✅ translated：translated（translated = 0）")
             
-            # ✅ 直接加载原始数据，不通过 _load_alfworld（避免重复打印统计）
             import importlib.util
             from pathlib import Path
             
@@ -691,7 +538,6 @@ Your code:
             alfworld_file = self.dataset_root / "alfworld" / "test.jsonl"
             dataset = ALFWorldDataset(str(alfworld_file))
             
-            # ✅ 静默加载数据（不打印统计信息）
             dataset.data = []
             with open(alfworld_file, 'r', encoding='utf-8') as f:
                 for line in f:
@@ -700,7 +546,6 @@ Your code:
                     except json.JSONDecodeError:
                         continue
             
-            # 简单随机划分：70%训练，30%测试
             all_raw_data = dataset.data.copy()
             random.shuffle(all_raw_data)
             
@@ -710,13 +555,12 @@ Your code:
             train_raw = all_raw_data[:train_end]
             test_raw = all_raw_data[train_end:]
             
-            print(f"\n✅ ALFWorld数据划分完成:")
-            print(f"  总数: {n} 个任务")
-            print(f"  训练集: {len(train_raw)} 个任务 ({len(train_raw)/n*100:.1f}%)")
-            print(f"  验证集: 0 个任务 (不使用验证阶段)")
-            print(f"  测试集: {len(test_raw)} 个任务 ({len(test_raw)/n*100:.1f}%)")
+            print(f"\n✅ ALFWorldtranslated:")
+            print(f"  translated: {n} translated")
+            print(f"  translated: {len(train_raw)} translated ({len(train_raw)/n*100:.1f}%)")
+            print(f"  translated: 0 translated (translated)")
+            print(f"  translated: {len(test_raw)} translated ({len(test_raw)/n*100:.1f}%)")
             
-            # 转换为统一格式
             def convert_to_unified(raw_samples):
                 unified = []
                 for item_raw in raw_samples:
@@ -736,17 +580,16 @@ Your code:
             
             splits = {
                 'train': convert_to_unified(train_raw),
-                'val': [],  # 不使用验证集
+                'val': [],
                 'test': convert_to_unified(test_raw)
             }
         elif domain == 'hotpotqa':
-            # ✨ HotpotQA：使用简单随机划分（类似GSM8k/MATH），避免小数据集分层采样的潜在问题
-            print("🔹 HotpotQA数据集加载配置：")
-            print("  数据源：datasets/hotpotqa/hotpotqa.jsonl")
-            print("  划分方式：简单随机划分（70% / 15% / 15%）")
-            print("  说明：不使用按难度分层采样，确保小数据集划分稳定")
+            print("🔹 HotpotQAtranslated：")
+            print("  translated：datasets/hotpotqa/hotpotqa.jsonl")
+            print("  translated：translated（70% / 15% / 15%）")
+            print("  translated：translated，translated")
             
-            all_data = self.load_dataset(domain, split='all')  # 加载全部数据
+            all_data = self.load_dataset(domain, split='all')
             random.shuffle(all_data)
             
             n = len(all_data)
@@ -759,12 +602,10 @@ Your code:
                 'test': all_data[val_end:]
             }
         elif domain == 'math':
-            # ✨ MATH：使用简单随机划分（类似GSM8k），避免小数据集分层采样导致验证/测试集过小
-            # 对于80条数据，分层采样会导致某些subject的验证/测试集只有0-1条
-            print("🔹 MATH数据集加载配置：")
-            print("  数据源：datasets/math/math.jsonl")
-            print("  划分方式：简单随机划分（70% / 15% / 15%）")
-            print("  说明：不使用分层采样，避免小数据集验证/测试集过小")
+            print("🔹 MATHtranslated：")
+            print("  translated：datasets/math/math.jsonl")
+            print("  translated：translated（70% / 15% / 15%）")
+            print("  translated：translated，translated/translated")
             
             all_data = self.load_dataset(domain, split='train')
             random.shuffle(all_data)
@@ -779,11 +620,10 @@ Your code:
                 'test': all_data[val_end:]
             }
         elif domain == 'mbpp':
-            # ✨ MBPP特殊处理：手动加载并划分为训练集和测试集（无验证集）
-            print("🔹 MBPP数据集加载配置：")
-            print("  数据源：datasets/mbpp/mbpp.jsonl")
-            print("  划分方式：简单随机划分（70% 训练，30% 测试）")
-            print("  ✅ 验证集：不使用（验证批次 = 0）")
+            print("🔹 MBPPtranslated：")
+            print("  translated：datasets/mbpp/mbpp.jsonl")
+            print("  translated：translated（70% translated，30% translated）")
+            print("  ✅ translated：translated（translated = 0）")
             
             all_data = self._load_mbpp()
             random.shuffle(all_data)
@@ -794,19 +634,18 @@ Your code:
             train_raw = all_data[:train_end]
             test_raw = all_data[train_end:]
             
-            print(f"\n✅ MBPP数据划分完成:")
-            print(f"  总数: {n} 个任务")
-            print(f"  训练集: {len(train_raw)} 个任务 (70.0%)")
-            print(f"  验证集: 0 个任务 (不使用验证阶段)")
-            print(f"  测试集: {len(test_raw)} 个任务 (30.0%)")
+            print(f"\n✅ MBPPtranslated:")
+            print(f"  translated: {n} translated")
+            print(f"  translated: {len(train_raw)} translated (70.0%)")
+            print(f"  translated: 0 translated (translated)")
+            print(f"  translated: {len(test_raw)} translated (30.0%)")
             
             splits = {
                 'train': train_raw,
-                'val': [],  # 不使用验证集
+                'val': [],
                 'test': test_raw
             }
         else:
-            # GSM8K、HumanEval等：统一按 train/val/test 三集划分
             all_data = self.load_dataset(domain, split='train')
             random.shuffle(all_data)
             
@@ -827,24 +666,11 @@ Your code:
                                          domain: str,
                                          split: str = "train",
                                          batch_size: int = 16) -> List[List[Dict]]:
-        """
-        为多智能体训练准备批次数据
-        
-        Args:
-            domain: 数据集名称
-            split: 数据分割
-            batch_size: 批次大小
-        
-        Returns:
-            批次数据列表
-        """
-        # 获取数据
         if domain in self.domain_splits and split in self.domain_splits[domain]:
             data = self.domain_splits[domain][split]
         else:
             data = self.load_dataset(domain, split)
         
-        # 创建批次
         batches = []
         for i in range(0, len(data), batch_size):
             batch = data[i:i + batch_size]
@@ -853,15 +679,6 @@ Your code:
         return batches
     
     def get_domain_statistics(self, domain: str = None) -> Dict[str, Any]:
-        """
-        获取数据集统计信息
-        
-        Args:
-            domain: 数据集名称，如果为None则返回所有数据集统计
-        
-        Returns:
-            统计信息字典
-        """
         if domain:
             domains = [domain]
         else:
@@ -879,7 +696,6 @@ Your code:
                         'test': len(splits_data.get('test', []))
                     }
                 else:
-                    # 尝试加载以获取统计
                     test_data = self.load_dataset(d, 'test')
                     stats[d] = {'test': len(test_data)}
             except FileNotFoundError:
@@ -888,15 +704,6 @@ Your code:
         return stats
     
     def get_task_description(self, domain: str) -> str:
-        """
-        获取领域任务描述（用于生成FSM和智能体）
-        
-        Args:
-            domain: 数据集名称
-        
-        Returns:
-            任务描述文本
-        """
         descriptions = {
             'gpqa': """
 Task: GPQA (Graduate-Level Multiple-Choice Question Answering)
@@ -1125,21 +932,11 @@ Available tools: problem_analysis, concept_identification, strategy_design, step
         return descriptions.get(domain, f"Task: Solve problems in {domain} domain")
     
     def format_for_llm(self, item: Dict[str, Any]) -> str:
-        """
-        将数据项格式化为LLM输入
-        
-        Args:
-            item: 数据项
-        
-        Returns:
-            格式化的文本
-        """
         domain = item['domain']
         
         if domain == 'mmlu':
             return f"{item['full_question']}\n\nPlease select the correct answer (A/B/C/D)."
         elif domain == 'gpqa':
-            # GPQA是高难度选择题：强制模型只输出选项字母，避免输出长解释污染评估
             q = item.get('full_question', item['question'])
             return (
                 f"{q}\n\n"
@@ -1165,16 +962,13 @@ Available tools: problem_analysis, concept_identification, strategy_design, step
             return f"Programming Task:\n{item['question']}\n\nPlease implement the function according to the specification."
         
         elif domain == 'mbpp':
-            # ✨ MBPP特殊处理：提取函数签名并包含在prompt中
             import re
             code = item.get('code', '')
-            # 提取函数名和参数（支持def func_name(args): 格式）
             func_match = re.search(r'def\s+(\w+)\s*\([^)]*\)', code)
             if func_match:
                 func_signature = func_match.group(0)
                 return f"{item['text']}\n\nImplement the function with this signature:\n{func_signature}\n\nYour implementation should pass these tests:\n{chr(10).join(item.get('test_list', [])[:3])}"
             else:
-                # 回退到使用full_question
                 return item.get('full_question', item['question'])
         
         elif domain == 'hotpotqa':
@@ -1189,26 +983,12 @@ Available tools: problem_analysis, concept_identification, strategy_design, step
         return item['question']
     
     def format_question_for_agents(self, question_data: Dict[str, Any], domain: str) -> str:
-        """
-        为智能体格式化问题（用于训练）
-        
-        Args:
-            question_data: 问题数据
-            domain: 数据集名称
-        
-        Returns:
-            格式化的问题文本
-        """
-        # 使用format_for_llm方法
         return self.format_for_llm(question_data)
 
 
-# 兼容旧代码：保留MMLUDataProcessor作为别名
 class MMLUDataProcessor(UnifiedDataProcessor):
-    """MMLU数据处理器（兼容旧代码）"""
     
     def __init__(self, data_root_path: str):
-        # 假设传入的是mmlu/data路径
         mmlu_data_path = Path(data_root_path)
         if mmlu_data_path.name == "data":
             dataset_root = mmlu_data_path.parent.parent
@@ -1221,10 +1001,8 @@ class MMLUDataProcessor(UnifiedDataProcessor):
         self.data_root_path = Path(data_root_path)
     
     def load_mmlu_data(self, split: str = "test") -> Dict[str, List[Dict]]:
-        """加载MMLU数据（兼容旧接口）"""
         data = self._load_mmlu(split)
         
-        # 按学科组织
         by_subject = defaultdict(list)
         for item in data:
             by_subject[item['subject']].append(item)
@@ -1233,28 +1011,23 @@ class MMLUDataProcessor(UnifiedDataProcessor):
 
 
 if __name__ == "__main__":
-    # 测试数据处理器
     processor = UnifiedDataProcessor("./datasets")
     
-    # 测试加载各个数据集
     for domain in ['mmlu', 'gsm8k', 'humaneval']:
         try:
             print(f"\n{'='*60}")
             print(f"Testing {domain.upper()}")
             print('='*60)
             
-            # 加载数据
             data = processor.load_dataset(domain, 'test')
             print(f"✅ Loaded {len(data)} samples")
             
-            # 显示第一个样本
             if data:
                 print(f"\nSample:")
                 sample = data[0]
                 formatted = processor.format_for_llm(sample)
                 print(formatted[:200] + "..." if len(formatted) > 200 else formatted)
             
-            # 获取任务描述
             task_desc = processor.get_task_description(domain)
             print(f"\nTask Description: {task_desc[:150]}...")
             
