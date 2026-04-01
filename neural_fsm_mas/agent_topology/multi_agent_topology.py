@@ -1,4 +1,3 @@
-"""Translated module documentation."""
 
 import shortuuid
 from typing import Any, List, Optional, Dict, Tuple
@@ -24,7 +23,6 @@ from torch_geometric.utils import dense_to_sparse
 
 
 class MultiAgentTopologyManager(ABC):
-    """Translated class documentation."""
 
     def __init__(self, 
                 task_domain: str,
@@ -104,7 +102,6 @@ class MultiAgentTopologyManager(ABC):
         )
     
     def _initialize_agent_nodes(self):
-        """Translated function documentation."""
         for i, agent_role in enumerate(self.agent_role_names):
             agent_config = self.agent_configuration_params[i]
             agent_node = ConcreteAgentExecutionNode(
@@ -118,7 +115,6 @@ class MultiAgentTopologyManager(ABC):
             self.agent_execution_nodes[agent_node.node_id] = agent_node
     
     def _initialize_potential_connections(self):
-        """Translated function documentation."""
         agent_ids = list(self.agent_execution_nodes.keys())
         
         for source_id in agent_ids:
@@ -131,7 +127,6 @@ class MultiAgentTopologyManager(ABC):
                 self.potential_temporal_connections.append([source_id, target_id])
     
     def _construct_role_adjacency_matrix(self):
-        """Translated function documentation."""
         role_connections: List[Tuple[str, str]] = self.domain_prompt_manager.get_role_connections()
         num_agents = self.num_agents
         role_adjacency = torch.zeros((num_agents, num_agents))
@@ -160,7 +155,6 @@ class MultiAgentTopologyManager(ABC):
         return edge_index
     
     def _construct_agent_features(self):
-        """Translated function documentation."""
         agent_features = []
         for agent_id in self.agent_execution_nodes:
             agent_role = self.agent_execution_nodes[agent_id].agent_role
@@ -172,11 +166,9 @@ class MultiAgentTopologyManager(ABC):
         return torch.tensor(np.array(agent_features))
     
     def _get_text_embedding(self, text: str) -> np.ndarray:
-        """Translated function documentation."""
         return np.random.randn(384)
     
     def _initialize_neural_networks(self):
-        """Translated function documentation."""
         if self.use_neural_temporal_graph:
             self.neural_temporal_graph = NeuralTemporalGraph(
                 agent_feature_dim=self.agent_features.size(1),
@@ -202,7 +194,6 @@ class MultiAgentTopologyManager(ABC):
                                         fixed_spatial_masks: torch.Tensor,
                                         initial_temporal_prob: float,
                                         fixed_temporal_masks: torch.Tensor):
-        """Translated function documentation."""
         if self.enable_spatial_optimization:
             initial_spatial_logit = torch.log(torch.tensor(initial_spatial_prob / (1 - initial_spatial_prob)))
         else:
@@ -226,7 +217,6 @@ class MultiAgentTopologyManager(ABC):
         self.temporal_connection_masks = torch.nn.Parameter(fixed_temporal_masks, requires_grad=False)
     
     def construct_enhanced_agent_features(self, task_query: str):
-        """Translated function documentation."""
         query_embedding = torch.tensor(self._get_text_embedding(task_query))
         query_embedding = query_embedding.unsqueeze(0).repeat((self.num_agents, 1))
         enhanced_features = torch.cat((self.agent_features, query_embedding), dim=1)
@@ -234,7 +224,6 @@ class MultiAgentTopologyManager(ABC):
         
     @property
     def spatial_adjacency_matrix(self):
-        """Translated function documentation."""
         matrix = np.zeros((len(self.agent_execution_nodes), len(self.agent_execution_nodes)))
         for i, agent1_id in enumerate(self.agent_execution_nodes):
             for j, agent2_id in enumerate(self.agent_execution_nodes):
@@ -244,7 +233,6 @@ class MultiAgentTopologyManager(ABC):
 
     @property
     def temporal_adjacency_matrix(self):
-        """Translated function documentation."""
         matrix = np.zeros((len(self.agent_execution_nodes), len(self.agent_execution_nodes)))
         for i, agent1_id in enumerate(self.agent_execution_nodes):
             for j, agent2_id in enumerate(self.agent_execution_nodes):
@@ -254,12 +242,10 @@ class MultiAgentTopologyManager(ABC):
 
     @property
     def num_agents(self):
-        """Translated function documentation."""
         return len(self.agent_execution_nodes)
 
     def construct_spatial_connections(self, sampling_temperature: float = 1.0, 
                                     connection_threshold: float = None) -> torch.Tensor:
-        """Translated function documentation."""
         self.clear_spatial_connections()
         connection_log_probs = [torch.tensor(0.0, requires_grad=self.enable_spatial_optimization)]
         
@@ -293,7 +279,6 @@ class MultiAgentTopologyManager(ABC):
     def construct_temporal_connections(self, interaction_round: int = 0, 
                                      sampling_temperature: float = 1.0, 
                                      connection_threshold: float = None) -> torch.Tensor:
-        """Translated function documentation."""
         self.clear_temporal_connections()
         connection_log_probs = [torch.tensor(0.0, requires_grad=self.enable_temporal_optimization)]
         
@@ -328,21 +313,17 @@ class MultiAgentTopologyManager(ABC):
         return torch.sum(torch.stack(connection_log_probs))
 
     def clear_spatial_connections(self):
-        """Translated function documentation."""
         for agent_node in self.agent_execution_nodes.values():
             agent_node.clear_spatial_connections()
 
     def clear_temporal_connections(self):
-        """Translated function documentation."""
         for agent_node in self.agent_execution_nodes.values():
             agent_node.clear_temporal_connections()
 
     def find_agent_node(self, agent_id: str) -> AgentExecutionNode:
-        """Translated function documentation."""
         return self.agent_execution_nodes.get(agent_id)
 
     def _check_connection_cycle(self, new_agent: AgentExecutionNode, target_agents: set) -> bool:
-        """Translated function documentation."""
         if new_agent in target_agents:
             return True
         for successor in new_agent.spatial_successors:
@@ -355,7 +336,6 @@ class MultiAgentTopologyManager(ABC):
                                           num_interaction_rounds: int = 3, 
                                           max_retry_attempts: int = 3, 
                                           max_execution_time: int = 600) -> List[Any]:
-        """Translated function documentation."""
         reasoning_log_probs = torch.tensor(0.0, dtype=torch.float32, requires_grad=True)
         enhanced_features = self.construct_enhanced_agent_features(task_input['task'])
         
@@ -418,7 +398,6 @@ class MultiAgentTopologyManager(ABC):
         return final_reasoning_results, reasoning_log_probs
     
     def update_agent_memories(self):
-        """Translated function documentation."""
         for agent_id, agent_node in self.agent_execution_nodes.items():
             agent_node.set_current_interaction_round(self.current_interaction_round)
             agent_node.update_interaction_memory()
@@ -427,24 +406,20 @@ class MultiAgentTopologyManager(ABC):
             pass
     
     def connect_to_decision_executor(self):
-        """Translated function documentation."""
         for agent_node in self.agent_execution_nodes.values():
             self.decision_executor.add_predecessor_connection(agent_node, 'spatial')
     
     def reset_neural_temporal_memories(self):
-        """Translated function documentation."""
         if self.use_neural_temporal_graph and self.neural_temporal_graph is not None:
             self.neural_temporal_graph.reset_agent_memories()
             self.current_interaction_round = 0
     
     def get_neural_memory_snapshot(self):
-        """Translated function documentation."""
         if self.use_neural_temporal_graph and self.neural_temporal_graph is not None:
             return self.neural_temporal_graph.get_memory_snapshot()
         return None
     
     def optimize_connection_topology(self, pruning_ratio: float) -> Tuple[torch.Tensor, torch.Tensor]:
-        """Translated function documentation."""
         if self.enable_spatial_optimization:
             active_spatial_connections = (self.spatial_connection_masks > 0).sum()
             inactive_spatial_connections = (self.spatial_connection_masks == 0).sum()
@@ -474,7 +449,6 @@ class MultiAgentTopologyManager(ABC):
         return self.spatial_connection_masks, self.temporal_connection_masks
 
     def _min_max_normalize(self, tensor: torch.Tensor) -> torch.Tensor:
-        """Translated function documentation."""
         min_val = tensor.min()
         max_val = tensor.max()
         if max_val - min_val == 0:
@@ -485,7 +459,6 @@ class MultiAgentTopologyManager(ABC):
     # ========================================================================
     
     def initialize_fsm_from_description(self, fsm_description: Dict[str, Any]):
-        """Translated function documentation."""
         agent_ids = list(self.agent_execution_nodes.keys())
         self.fsm_state_manager = FSMStateManager(agent_ids)
         
@@ -514,7 +487,6 @@ class MultiAgentTopologyManager(ABC):
                                     max_retry_attempts: int = 3,
                                     max_execution_time: int = 600,
                                     fsm_outputs: Optional[Dict[str, torch.Tensor]] = None) -> Tuple[str, torch.Tensor]:
-        """Translated function documentation."""
         if not self.use_fsm_mode or self.fsm_state_manager is None:
             raise ValueError("FSM mode is not enabled. Call initialize_fsm_from_description() first.")
         
@@ -671,7 +643,6 @@ class MultiAgentTopologyManager(ABC):
                                                  verbose: bool = True,
                                                  phase: str = "train",
                                                  attack_injector: Optional[Any] = None) -> Tuple[str, torch.Tensor, bool, Dict[int, str]]:
-        """Translated function documentation."""
         if not self.use_fsm_mode or self.fsm_state_manager is None:
             raise ValueError("FSM mode is not enabled. Call initialize_fsm_from_description() first.")
         
@@ -1106,7 +1077,6 @@ class MultiAgentTopologyManager(ABC):
     def learn_fsm_from_data(self, 
                            training_samples: List[Dict[str, Any]],
                            num_states: int = 4) -> Dict[str, Any]:
-        """Translated function documentation."""
         
         agent_ids = list(self.agent_execution_nodes.keys())
         
