@@ -1,16 +1,16 @@
 """
 Reasoning Agent Factory for Multi-Agent System
-推理智能体工厂
+Reasoning agent factory
 
-适配自原始AgentRegistry实现，专门为MetaAgent项目优化
-支持动态创建和管理不同类型的推理智能体
+Adapted from the original AgentRegistry implementation and optimized for the MetaAgent project
+Supports dynamic creation and management of different reasoning agent types
 """
 
 from typing import Type, Dict, Any, Optional
 import sys
 from pathlib import Path
 
-# 添加MetaAgent路径
+# Add MetaAgent path
 sys.path.append(str(Path(__file__).parent.parent.parent))
 sys.path.append(str(Path(__file__).parent.parent))
 
@@ -19,15 +19,15 @@ from neural_fsm_mas.agent_topology.agent_node import AgentExecutionNode
 
 class ReasoningAgentRegistry:
     """
-    推理智能体注册表
-    
-    管理不同类型推理智能体的注册和创建
+    Reasoning agent registry
+
+    Manages registration and creation of different reasoning agent types
     """
     _agent_registry: Dict[str, Type[AgentExecutionNode]] = {}
     
     @classmethod
     def register_agent_type(cls, agent_type_name: str):
-        """注册智能体类型的装饰器"""
+        """Decorator for registering agent types."""
         def decorator(agent_class: Type[AgentExecutionNode]):
             cls._agent_registry[agent_type_name] = agent_class
             return agent_class
@@ -35,12 +35,12 @@ class ReasoningAgentRegistry:
     
     @classmethod
     def get_registered_agent_types(cls):
-        """获取所有已注册的智能体类型"""
+        """Get all registered agent types."""
         return list(cls._agent_registry.keys())
     
     @classmethod
     def create_agent(cls, agent_type_name: str, *args, **kwargs) -> AgentExecutionNode:
-        """创建指定类型的智能体"""
+        """Create an agent of the specified type."""
         if agent_type_name not in cls._agent_registry:
             raise ValueError(f"Unknown agent type: {agent_type_name}. Available types: {list(cls._agent_registry.keys())}")
         
@@ -49,7 +49,7 @@ class ReasoningAgentRegistry:
     
     @classmethod
     def get_agent_class(cls, agent_type_name: str) -> Type[AgentExecutionNode]:
-        """获取智能体类"""
+        """Get the agent class."""
         if agent_type_name not in cls._agent_registry:
             raise ValueError(f"Unknown agent type: {agent_type_name}")
         return cls._agent_registry[agent_type_name]
@@ -57,37 +57,37 @@ class ReasoningAgentRegistry:
 
 class ReasoningAgentFactory:
     """
-    推理智能体工厂
-    
-    提供便捷的智能体创建接口
+    Reasoning agent factory
+
+    Provides convenient interfaces for creating agents
     """
     
     @staticmethod
     def create_agent(agent_type: str, **config_params) -> AgentExecutionNode:
         """
-        创建推理智能体
+        Create a reasoning agent.
         
         Args:
-            agent_type: 智能体类型名称
-            **config_params: 智能体配置参数
+            agent_type: Agent type name
+            **config_params: Agent configuration parameters
             
         Returns:
-            创建的智能体实例
+            Created agent instance
         """
         return ReasoningAgentRegistry.create_agent(agent_type, **config_params)
     
     @staticmethod
     def get_available_agent_types() -> list:
-        """获取可用的智能体类型"""
+        """Get available agent types."""
         return ReasoningAgentRegistry.get_registered_agent_types()
     
     @staticmethod
     def register_custom_agent(agent_type_name: str, agent_class: Type[AgentExecutionNode]):
-        """注册自定义智能体类型"""
+        """Register a custom agent type."""
         ReasoningAgentRegistry._agent_registry[agent_type_name] = agent_class
 
 
-# 导入并注册具体的智能体实现
+# Import and register concrete agent implementations
 from neural_fsm_mas.reasoning_agents.mathematical_reasoning_agent import MathematicalReasoningAgent
 from neural_fsm_mas.reasoning_agents.analytical_reasoning_agent import AnalyticalReasoningAgent
 from neural_fsm_mas.reasoning_agents.decision_making_agent import DecisionMakingAgent
@@ -95,7 +95,7 @@ from neural_fsm_mas.reasoning_agents.code_generation_agent import CodeGeneration
 from neural_fsm_mas.reasoning_agents.adversarial_reasoning_agent import AdversarialReasoningAgent
 
 
-# 导出主要类和函数
+# Export main classes and functions
 __all__ = [
     'ReasoningAgentRegistry', 
     'ReasoningAgentFactory'
