@@ -1,25 +1,12 @@
-"""
-Domain Prompt Manager for Multi-Agent System
-领域提示管理器
-
-适配自原始PromptSetRegistry实现，专门为MetaAgent项目优化
-支持不同领域的提示管理和角色定义
-"""
 
 from typing import Type, Dict, Any, List, Tuple, Optional
 import sys
 from pathlib import Path
 
-# 添加MetaAgent路径
 sys.path.append(str(Path(__file__).parent.parent.parent))
 
 
 class DomainPromptSet:
-    """
-    领域提示集合基类
-    
-    定义了特定领域的提示模板、角色描述和连接关系
-    """
     
     def __init__(self, domain_name: str):
         self.domain_name = domain_name
@@ -29,38 +16,27 @@ class DomainPromptSet:
         self.constraints = {}
     
     def get_role_description(self, role_name: str) -> str:
-        """获取角色描述"""
         return self.role_descriptions.get(role_name, f"You are a {role_name} agent.")
     
     def get_role_connections(self) -> List[Tuple[str, str]]:
-        """获取角色连接关系"""
         return self.role_connections
     
     def get_answer_prompt(self, question: str, role: str) -> str:
-        """获取回答提示"""
         base_prompt = self.answer_prompts.get(role, "Please answer the following question: {question}")
         return base_prompt.format(question=question)
     
     def get_constraint(self, role: str) -> str:
-        """获取角色约束"""
         return self.constraints.get(role, "Please provide a helpful and accurate response.")
     
     def get_available_roles(self) -> List[str]:
-        """获取可用角色列表"""
         return list(self.role_descriptions.keys())
 
 
 class MMLUDomainPromptSet(DomainPromptSet):
-    """
-    MMLU领域提示集合
-    
-    专门为MMLU数据集优化的提示集合
-    """
     
     def __init__(self):
         super().__init__("mmlu")
         
-        # 定义MMLU相关的角色
         self.role_descriptions = {
             "Knowledge Expert": """
 You are a knowledgeable expert in question answering across multiple domains.
@@ -105,7 +81,6 @@ You can analyze social phenomena and human decision-making processes.
 """
         }
         
-        # 定义角色连接关系
         self.role_connections = [
             ("Knowledge Expert", "Subject Specialist"),
             ("Knowledge Expert", "Critical Analyzer"),
@@ -120,7 +95,6 @@ You can analyze social phenomena and human decision-making processes.
             ("Social Scientist", "Critical Analyzer")
         ]
         
-        # 定义回答提示模板
         self.answer_prompts = {
             "Knowledge Expert": """
 Question: {question}
@@ -193,7 +167,6 @@ As a social scientist, please:
 """
         }
         
-        # 定义角色约束
         self.constraints = {
             "Knowledge Expert": "Provide comprehensive and accurate analysis. Focus on identifying key concepts and structuring the problem-solving approach.",
             "Subject Specialist": "Leverage your specialized knowledge to provide expert-level insights. Ensure accuracy within your domain of expertise.",
@@ -206,11 +179,6 @@ As a social scientist, please:
 
 
 class GSM8KDomainPromptSet(DomainPromptSet):
-    """
-    GSM8K领域提示集合
-    
-    专门为GSM8K数学问题优化的提示集合
-    """
     
     def __init__(self):
         super().__init__("gsm8k")
@@ -249,11 +217,6 @@ You identify potential errors, suggest improvements, and ensure the solution add
 
 
 class HumanEvalDomainPromptSet(DomainPromptSet):
-    """
-    HumanEval领域提示集合
-    
-    专门为HumanEval代码生成任务优化的提示集合
-    """
     
     def __init__(self):
         super().__init__("humaneval")
@@ -362,11 +325,6 @@ As an algorithm expert, please:
 
 
 class HotpotQADomainPromptSet(DomainPromptSet):
-    """
-    HotpotQA领域提示集合
-    
-    专门为HotpotQA多跳问答任务优化的提示集合
-    """
     
     def __init__(self):
         super().__init__("hotpotqa")
@@ -421,11 +379,6 @@ You check for contradictions and ensure answer quality.
 
 
 class ALFWorldDomainPromptSet(DomainPromptSet):
-    """
-    ALFWorld领域提示集合
-    
-    专门为ALFWorld具身智能体交互任务优化的提示集合
-    """
     
     def __init__(self):
         super().__init__("alfworld")
@@ -487,11 +440,6 @@ You validate task completion and provide final confirmation.
 
 
 class MATHDomainPromptSet(DomainPromptSet):
-    """
-    MATH领域提示集合
-    
-    专门为MATH高级数学竞赛题优化的提示集合
-    """
     
     def __init__(self):
         super().__init__("math")
@@ -559,43 +507,28 @@ You ensure correct mathematical typesetting and notation.
 
 
 class DomainPromptRegistry:
-    """
-    领域提示注册表
-    
-    管理不同领域的提示集合
-    """
     _prompt_sets: Dict[str, DomainPromptSet] = {}
     
     @classmethod
     def register_domain(cls, domain_name: str, prompt_set: DomainPromptSet):
-        """注册领域提示集合"""
         cls._prompt_sets[domain_name] = prompt_set
     
     @classmethod
     def get_prompt_set(cls, domain_name: str) -> Optional[DomainPromptSet]:
-        """获取领域提示集合"""
         return cls._prompt_sets.get(domain_name)
     
     @classmethod
     def get_available_domains(cls) -> List[str]:
-        """获取可用领域列表"""
         return list(cls._prompt_sets.keys())
 
 
 class DomainPromptManager:
-    """
-    领域提示管理器
-    
-    提供统一的领域提示管理接口
-    """
     
     @staticmethod
     def get_manager(domain_name: str) -> DomainPromptSet:
-        """获取领域提示管理器"""
         prompt_set = DomainPromptRegistry.get_prompt_set(domain_name)
         
         if prompt_set is None:
-            # 如果没有找到特定领域的提示集合，创建默认的
             prompt_set = DomainPromptSet(domain_name)
             prompt_set.role_descriptions = {
                 "General Agent": f"You are a general-purpose agent working on {domain_name} tasks.",
@@ -617,7 +550,6 @@ class DomainPromptManager:
                              role_connections: List[Tuple[str, str]] = None,
                              answer_prompts: Dict[str, str] = None,
                              constraints: Dict[str, str] = None):
-        """注册自定义领域"""
         prompt_set = DomainPromptSet(domain_name)
         prompt_set.role_descriptions = role_descriptions
         prompt_set.role_connections = role_connections or []
@@ -628,33 +560,15 @@ class DomainPromptManager:
 
 
 # =====================================================================
-# FSM模式提示集（新增）
 # =====================================================================
 
 class FSMPromptMixin:
-    """
-    FSM模式提示混入类
-    
-    为智能体提供FSM状态转移指导
-    """
     
     @staticmethod
     def get_fsm_instruction(state_id: int, 
                            state_name: str,
                            is_final: bool = False,
                            possible_next_states: List[Dict[str, Any]] = None) -> str:
-        """
-        获取FSM状态转移指导
-        
-        Args:
-            state_id: 当前状态ID
-            state_name: 当前状态名称
-            is_final: 是否为最终状态
-            possible_next_states: 可能的下一个状态列表
-        
-        Returns:
-            FSM指导文本
-        """
         if is_final:
             return f"""
 You are currently in the FINAL state (State {state_id}: {state_name}).
@@ -688,15 +602,6 @@ For example: <STATE_TRANS>: 2
     
     @staticmethod
     def get_listener_context(predecessor_messages: List[str]) -> str:
-        """
-        获取前序智能体消息的上下文
-        
-        Args:
-            predecessor_messages: 前序智能体的消息列表
-        
-        Returns:
-            上下文文本
-        """
         if not predecessor_messages:
             return ""
         
@@ -709,16 +614,10 @@ For example: <STATE_TRANS>: 2
 
 
 class FSMGSMPromptSet(GSM8KDomainPromptSet):
-    """
-    FSM模式的GSM8K提示集
-    
-    扩展GSM8K提示集以支持FSM状态转移
-    """
     
     def __init__(self):
         super().__init__()
         
-        # 定义FSM状态
         self.fsm_states = {
             0: {
                 'name': 'Problem Understanding',
@@ -747,23 +646,19 @@ class FSMGSMPromptSet(GSM8KDomainPromptSet):
     def get_answer_prompt(self, question: str, role: str, 
                          state_id: Optional[int] = None,
                          predecessor_messages: Optional[List[str]] = None) -> str:
-        """获取FSM模式的回答提示"""
         base_prompt = super().get_answer_prompt(question, role)
         
-        # 添加前序消息上下文
         if predecessor_messages:
             context = FSMPromptMixin.get_listener_context(predecessor_messages)
             base_prompt = context + base_prompt
         
-        # 添加FSM状态转移指导
         if state_id is not None and state_id in self.fsm_states:
             state_info = self.fsm_states[state_id]
             is_final = state_info.get('is_final', False)
             
-            # 获取可能的下一个状态
             possible_next = []
             for sid, sinfo in self.fsm_states.items():
-                if sid > state_id:  # 只允许前向转移
+                if sid > state_id:
                     possible_next.append({
                         'id': sid,
                         'name': sinfo['name'],
@@ -779,7 +674,6 @@ class FSMGSMPromptSet(GSM8KDomainPromptSet):
 
 
 class FSMMMLUPromptSet(MMLUDomainPromptSet):
-    """FSM模式的MMLU提示集"""
     
     def __init__(self):
         super().__init__()
@@ -812,7 +706,6 @@ class FSMMMLUPromptSet(MMLUDomainPromptSet):
     def get_answer_prompt(self, question: str, role: str,
                          state_id: Optional[int] = None,
                          predecessor_messages: Optional[List[str]] = None) -> str:
-        """获取FSM模式的回答提示"""
         base_prompt = super().get_answer_prompt(question, role)
         
         if predecessor_messages:
@@ -837,7 +730,6 @@ class FSMMMLUPromptSet(MMLUDomainPromptSet):
 
 
 class FSMHumanEvalPromptSet(HumanEvalDomainPromptSet):
-    """FSM模式的HumanEval提示集"""
     
     def __init__(self):
         super().__init__()
@@ -870,7 +762,6 @@ class FSMHumanEvalPromptSet(HumanEvalDomainPromptSet):
     def get_answer_prompt(self, question: str, role: str,
                          state_id: Optional[int] = None,
                          predecessor_messages: Optional[List[str]] = None) -> str:
-        """获取FSM模式的回答提示"""
         base_prompt = super().get_answer_prompt(question, role)
         
         if predecessor_messages:
@@ -894,7 +785,6 @@ class FSMHumanEvalPromptSet(HumanEvalDomainPromptSet):
         return base_prompt
 
 
-# 初始化默认领域
 DomainPromptRegistry.register_domain("mmlu", MMLUDomainPromptSet())
 DomainPromptRegistry.register_domain("gsm8k", GSM8KDomainPromptSet())
 DomainPromptRegistry.register_domain("humaneval", HumanEvalDomainPromptSet())
@@ -902,12 +792,10 @@ DomainPromptRegistry.register_domain("hotpotqa", HotpotQADomainPromptSet())  # �
 DomainPromptRegistry.register_domain("alfworld", ALFWorldDomainPromptSet())  # ✨ NEW
 DomainPromptRegistry.register_domain("math", MATHDomainPromptSet())          # ✨ NEW
 
-# 注册FSM模式提示集
 DomainPromptRegistry.register_domain("fsm_mmlu", FSMMMLUPromptSet())
 DomainPromptRegistry.register_domain("fsm_gsm8k", FSMGSMPromptSet())
 DomainPromptRegistry.register_domain("fsm_humaneval", FSMHumanEvalPromptSet())
 
-# 导出主要类
 __all__ = [
     'DomainPromptSet', 
     'MMLUDomainPromptSet', 
