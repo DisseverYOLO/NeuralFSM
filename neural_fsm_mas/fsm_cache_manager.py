@@ -1,14 +1,14 @@
 """
 FSM Cache Manager
-FSM缓存管理系统
+FSM cache management system
 
-功能:
-1. 保存和加载预生成的FSM配置
-2. 支持版本管理和缓存验证
-3. MMLU类别级缓存支持
-4. 自动生成和更新缓存
+Features:
+1. Save and load pre-generated FSM configurations.
+2. Support version management and cache validation.
+3. Support category-level caching for MMLU.
+4. Automatically generate and update caches.
 
-目录结构:
+Directory structure:
 fsm_cache/
 ├── gsm8k/
 │   ├── fsm_config.json
@@ -38,44 +38,44 @@ import shutil
 
 class FSMCacheManager:
     """
-    FSM缓存管理器
+    FSM cache manager
     
-    功能:
-    - 保存/加载FSM配置
-    - 缓存验证
-    - MMLU类别级管理
-    - 元数据跟踪
+    Features:
+    - Save and load FSM configurations
+    - Cache validation
+    - Category-level management for MMLU
+    - Metadata tracking
     """
     
     def __init__(self, cache_dir: str = "./fsm_cache"):
         """
-        初始化缓存管理器
+        Initialize the cache manager.
         
         Args:
-            cache_dir: 缓存根目录
+            cache_dir: Root cache directory.
         """
         self.cache_dir = Path(cache_dir)
         self.cache_dir.mkdir(parents=True, exist_ok=True)
         
-        # 支持的数据集
+        # Supported datasets.
         self.supported_datasets = [
             'gsm8k', 'mmlu', 'humaneval', 
             'hotpotqa', 'alfworld', 'math'
         ]
         
-        # MMLU特殊处理：有57个类别
-        self.mmlu_categories = None  # 延迟加载
+        # Special handling for MMLU, which has 57 categories.
+        self.mmlu_categories = None  # Lazy-loaded.
     
     def get_cache_path(self, dataset: str, category: Optional[str] = None) -> Path:
         """
-        获取缓存路径
+        Get the cache path.
         
         Args:
-            dataset: 数据集名称
-            category: MMLU类别（仅MMLU需要）
+            dataset: Dataset name.
+            category: MMLU category, only needed for MMLU.
         
         Returns:
-            缓存目录路径
+            Cache directory path.
         """
         if dataset.lower() == 'mmlu' and category:
             return self.cache_dir / 'mmlu' / category
@@ -84,18 +84,18 @@ class FSMCacheManager:
     
     def has_cache(self, dataset: str, category: Optional[str] = None) -> bool:
         """
-        检查缓存是否存在
+        Check whether a cache exists.
         
         Args:
-            dataset: 数据集名称
-            category: MMLU类别（可选）
+            dataset: Dataset name.
+            category: Optional MMLU category.
         
         Returns:
-            是否存在缓存
+            Whether the cache exists.
         """
         cache_path = self.get_cache_path(dataset, category)
         
-        # 检查必需文件
+        # Check required files.
         required_files = ['fsm_config.json', 'agents.json', 'metadata.json']
         return all((cache_path / f).exists() for f in required_files)
     
@@ -106,27 +106,27 @@ class FSMCacheManager:
                  category: Optional[str] = None,
                  metadata: Optional[Dict[str, Any]] = None):
         """
-        保存FSM到缓存
+        Save an FSM to the cache.
         
         Args:
-            dataset: 数据集名称
-            fsm_config: FSM配置字典
-            agents: 智能体列表
-            category: MMLU类别（可选）
-            metadata: 额外元数据
+            dataset: Dataset name.
+            fsm_config: FSM configuration dictionary.
+            agents: Agent list.
+            category: Optional MMLU category.
+            metadata: Additional metadata.
         """
         cache_path = self.get_cache_path(dataset, category)
         cache_path.mkdir(parents=True, exist_ok=True)
         
-        # 保存FSM配置
+        # Save the FSM configuration.
         with open(cache_path / 'fsm_config.json', 'w', encoding='utf-8') as f:
             json.dump(fsm_config, f, indent=2, ensure_ascii=False)
         
-        # 保存智能体
+        # Save the agents.
         with open(cache_path / 'agents.json', 'w', encoding='utf-8') as f:
             json.dump(agents, f, indent=2, ensure_ascii=False)
         
-        # 生成并保存元数据
+        # Generate and save metadata.
         full_metadata = {
             'dataset': dataset,
             'category': category,
@@ -149,17 +149,17 @@ class FSMCacheManager:
     
     def load_fsm(self, dataset: str, category: Optional[str] = None) -> Dict[str, Any]:
         """
-        从缓存加载FSM
+        Load an FSM from the cache.
         
         Args:
-            dataset: 数据集名称
-            category: MMLU类别（可选）
+            dataset: Dataset name.
+            category: Optional MMLU category.
         
         Returns:
-            包含fsm_config, agents, metadata的字典
+            Dictionary containing `fsm_config`, `agents`, and `metadata`.
         
         Raises:
-            FileNotFoundError: 如果缓存不存在
+            FileNotFoundError: Raised if the cache does not exist.
         """
         if not self.has_cache(dataset, category):
             cache_id = f"{dataset}/{category}" if category else dataset
@@ -167,7 +167,7 @@ class FSMCacheManager:
         
         cache_path = self.get_cache_path(dataset, category)
         
-        # 加载文件
+        # Load files.
         with open(cache_path / 'fsm_config.json', 'r', encoding='utf-8') as f:
             fsm_config = json.load(f)
         
@@ -188,11 +188,11 @@ class FSMCacheManager:
     
     def clear_cache(self, dataset: str, category: Optional[str] = None):
         """
-        清除缓存
+        Clear a cache.
         
         Args:
-            dataset: 数据集名称
-            category: MMLU类别（可选，如果为None则清除整个数据集）
+            dataset: Dataset name.
+            category: Optional MMLU category. If `None`, clear the entire dataset cache.
         """
         cache_path = self.get_cache_path(dataset, category)
         
@@ -205,14 +205,14 @@ class FSMCacheManager:
     
     def get_cache_info(self, dataset: str, category: Optional[str] = None) -> Dict[str, Any]:
         """
-        获取缓存信息
+        Get cache information.
         
         Args:
-            dataset: 数据集名称
-            category: MMLU类别（可选）
+            dataset: Dataset name.
+            category: Optional MMLU category.
         
         Returns:
-            缓存信息字典
+            Cache information dictionary.
         """
         if not self.has_cache(dataset, category):
             return {'exists': False}
@@ -229,7 +229,7 @@ class FSMCacheManager:
     
     def list_all_caches(self) -> Dict[str, Any]:
         """
-        列出所有缓存
+        List all caches.
         
         Returns:
             {
@@ -246,7 +246,7 @@ class FSMCacheManager:
         
         for dataset in self.supported_datasets:
             if dataset == 'mmlu':
-                # MMLU特殊处理：列出所有类别
+                # Special handling for MMLU: list all categories.
                 mmlu_dir = self.cache_dir / 'mmlu'
                 if mmlu_dir.exists():
                     result['mmlu'] = {}
@@ -255,44 +255,44 @@ class FSMCacheManager:
                             category = category_dir.name
                             result['mmlu'][category] = self.get_cache_info('mmlu', category)
             else:
-                # 其他数据集
+                # Other datasets.
                 result[dataset] = self.get_cache_info(dataset)
         
         return result
     
     def validate_cache(self, dataset: str, category: Optional[str] = None) -> bool:
         """
-        验证缓存完整性
+        Validate cache integrity.
         
         Args:
-            dataset: 数据集名称
-            category: MMLU类别（可选）
+            dataset: Dataset name.
+            category: Optional MMLU category.
         
         Returns:
-            是否有效
+            Whether the cache is valid.
         """
         if not self.has_cache(dataset, category):
             return False
         
         try:
-            # 尝试加载
+            # Try loading the cache.
             cached = self.load_fsm(dataset, category)
             
-            # 验证必需字段
+            # Validate required fields.
             fsm_config = cached['fsm_config']
             agents = cached['agents']
             
-            # FSM配置验证
+            # Validate the FSM configuration.
             if 'states' not in fsm_config:
                 print(f"❌ Invalid cache: missing 'states' in fsm_config")
                 return False
             
-            # 智能体验证
+            # Validate the agents.
             if not isinstance(agents, list) or len(agents) == 0:
                 print(f"❌ Invalid cache: agents must be a non-empty list")
                 return False
             
-            # 状态转移验证
+            # Validate state transitions.
             for state in fsm_config['states']:
                 if 'state_name' not in state:
                     print(f"❌ Invalid cache: state missing 'state_name'")
@@ -307,26 +307,26 @@ class FSMCacheManager:
     
     def _compute_hash(self, data: Any) -> str:
         """
-        计算数据哈希值
+        Compute the data hash value.
         
         Args:
-            data: 要哈希的数据
+            data: Data to hash.
         
         Returns:
-            SHA256哈希字符串
+            SHA256 hash string.
         """
         json_str = json.dumps(data, sort_keys=True)
         return hashlib.sha256(json_str.encode()).hexdigest()[:16]
     
     def get_mmlu_categories(self) -> List[str]:
         """
-        获取MMLU的所有类别
+        Get all MMLU categories.
         
         Returns:
-            类别列表
+            Category list.
         """
         if self.mmlu_categories is None:
-            # 从MMLU数据集目录扫描
+            # Scan the MMLU dataset directory.
             mmlu_test_dir = Path("./datasets/mmlu/data/test")
             if mmlu_test_dir.exists():
                 self.mmlu_categories = [
@@ -334,7 +334,7 @@ class FSMCacheManager:
                     for f in mmlu_test_dir.glob('*_test.csv')
                 ]
             else:
-                # 硬编码的MMLU类别列表
+                # Hard-coded MMLU category list.
                 self.mmlu_categories = [
                     'abstract_algebra', 'anatomy', 'astronomy', 'business_ethics',
                     'clinical_knowledge', 'college_biology', 'college_chemistry',
@@ -366,23 +366,23 @@ class FSMCacheManager:
 
 def create_cache_manager(cache_dir: str = "./fsm_cache") -> FSMCacheManager:
     """
-    便捷函数: 创建缓存管理器
+    Convenience function for creating a cache manager.
     
     Args:
-        cache_dir: 缓存目录
+        cache_dir: Cache directory.
     
     Returns:
-        FSMCacheManager实例
+        FSMCacheManager instance.
     """
     return FSMCacheManager(cache_dir)
 
 
-# 示例用法
+# Example usage
 if __name__ == "__main__":
-    # 创建缓存管理器
+    # Create the cache manager.
     manager = create_cache_manager()
     
-    # 示例：保存GSM8K的FSM
+    # Example: save a GSM8K FSM.
     example_fsm_config = {
         'states': [
             {'state_name': 'UnderstandProblem', 'description': '...', 'transitions': []},
@@ -396,12 +396,12 @@ if __name__ == "__main__":
     
     # manager.save_fsm('gsm8k', example_fsm_config, example_agents)
     
-    # 检查缓存
+    # Check caches.
     print(f"\n📊 Cache Status:")
     print(f"  GSM8K: {'✅' if manager.has_cache('gsm8k') else '❌'}")
     print(f"  MMLU (abstract_algebra): {'✅' if manager.has_cache('mmlu', 'abstract_algebra') else '❌'}")
     
-    # 列出所有缓存
+    # List all caches.
     print(f"\n📂 All Caches:")
     all_caches = manager.list_all_caches()
     for dataset, info in all_caches.items():
@@ -414,4 +414,3 @@ if __name__ == "__main__":
             print(f"  {dataset}: ✅ ({info.get('num_states')} states)")
         else:
             print(f"  {dataset}: ❌")
-
