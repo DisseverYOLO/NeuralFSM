@@ -1,8 +1,7 @@
 import os
 from openai import OpenAI, AzureOpenAI
 import json
-# export AZURE_OPENAI_API_KEY="YOUR_KEY_HERE"
-# export AZURE_OPENAI_API_BASE="https://yaolun-west.openai.azure.com/"
+
 
 def _ensure_api_env_from_config():
     """If OPENAI envs are missing, try loading them from project root config.yaml."""
