@@ -1,8 +1,6 @@
 """
 Protected Neural Multi-Agent System Training Script
-Protected neural multi-agent system training script
 
-Integrates protection mechanisms on top of `train_neural_mas.py`.
 """
 
 import asyncio
