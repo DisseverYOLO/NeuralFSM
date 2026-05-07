@@ -1,9 +1,6 @@
 """
 Neural Multi-Agent System Training Script
-Neural multi-agent system training script
 
-Integrates MetaAgent and GDesigner features and trains the TGN network on multiple datasets.
-Supported datasets: MMLU, GSM8K, and HumanEval.
 Learns state-transition rules and agent communication networks.
 
 Note: this is a simplified collaborative MAS trainer.
