@@ -107,8 +107,7 @@ def parse_arguments():
     parser.add_argument('--generate_fsm_if_missing', action='store_true', default=True,
                        help='Automatically generate FSM if cache is missing')
     
-    # Note: Experiment 2 does not use prompt optimization (it focuses on protection mechanisms)
-    # Prompt optimization is only available in Experiment 1
+
     
     # TGN arguments
     parser.add_argument('--memory_dim', type=int, default=128,
