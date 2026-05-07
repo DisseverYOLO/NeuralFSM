@@ -1,9 +1,7 @@
 """
-Text embedding module
+
 Text Embedding Module
 
-Use Sentence Transformers to convert text (agent descriptions, state descriptions) into vector representations
-Referenced from GDesigner's profile_embedding.py implementation
 """
 
 import numpy as np
@@ -123,7 +121,7 @@ class TextEmbeddingModel:
                                     node_features: torch.Tensor,
                                     query: str) -> torch.Tensor:
         """
-        Combine node features with query embeddings (following GDesigner's construct_new_features).
+        Combine node features with query embeddings 
         
         Args:
             node_features: Node feature tensor, shape: [num_nodes, feature_dim]
