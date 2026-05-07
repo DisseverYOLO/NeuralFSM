@@ -1,7 +1,7 @@
 """
 FSM Multi-Agent System Training Script
 
-Fully integrates MetaAgent's FSM-generation capability with TGN learning.
+
 Supports:
 1. Automatic generation of agent roles and state descriptions
 2. Random sampling of state-transition and listening communication topologies
