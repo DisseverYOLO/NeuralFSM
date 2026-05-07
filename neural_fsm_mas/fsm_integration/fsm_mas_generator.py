@@ -1,9 +1,6 @@
 """
 FSM Multi-Agent System Generator
-FSM multi-agent system generator
 
-Fully integrates MetaAgent's agent generation and FSM generation capabilities
-Supports random topology sampling and uses TGN to learn optimal paths
 
 """
 
@@ -226,7 +223,6 @@ class FSMMultiAgentSystemGenerator:
         """
         Initialize TGN neural learners using the embedding dimension.
         
-        Following GDesigner, use the Sentence Transformer embedding dimension as the node feature dimension.
         """
         # State transition learner
         num_states = len(self.generated_fsm['states'])
@@ -255,11 +251,6 @@ class FSMMultiAgentSystemGenerator:
                                 learning_rate: float = 0.001) -> Dict[str, Any]:
         """
         Compute auxiliary MSE reconstruction loss for combination with policy gradients.
-        
-        ⚠️ Note: this method only computes MSE reconstruction loss and does not update parameters.
-        - MSE loss acts as an auxiliary regularization term to help TGN learn stable node representations
-        - Actual parameter updates are performed in train_neural_mas.py through the combined loss
-        - Combined loss = α * policy gradient + β * MSE reconstruction
         
         Args:
             training_episodes: Number of training episodes (currently only a single loss is computed)
@@ -305,7 +296,6 @@ class FSMMultiAgentSystemGenerator:
     
     def _prepare_state_features(self) -> torch.Tensor:
         """
-        Prepare state features (following GDesigner's construct_features).
         
         Use Sentence Transformer to embed state descriptions as vectors.
         """
@@ -320,7 +310,7 @@ class FSMMultiAgentSystemGenerator:
     
     def _prepare_agent_features(self) -> torch.Tensor:
         """
-        Prepare agent features (following GDesigner's construct_features).
+
         
         Use Sentence Transformer to embed agent descriptions as vectors.
         """
@@ -337,7 +327,7 @@ class FSMMultiAgentSystemGenerator:
                                      node_features: torch.Tensor,
                                      query: str) -> torch.Tensor:
         """
-        Combine node features with query embeddings (following GDesigner's construct_new_features).
+
         
         Args:
             node_features: Node features [num_nodes, feature_dim]
@@ -388,10 +378,7 @@ class FSMMultiAgentSystemGenerator:
                                optimizer: torch.optim.Optimizer,
                                episode: int) -> float:
         """
-        [Auxiliary method] Compute MSE reconstruction loss for state transitions.
-        
-        Note: this method only computes the loss value and does not update parameters.
-        Actual parameter updates are performed through the combined loss in train_neural_mas.py.
+ 
         """
         edge_index = self._build_state_edge_index()
         timestamps = torch.tensor([episode] * len(self.generated_fsm['states']), dtype=torch.float)
@@ -405,10 +392,7 @@ class FSMMultiAgentSystemGenerator:
                                  optimizer: torch.optim.Optimizer,
                                  episode: int) -> float:
         """
-        [Auxiliary method] Compute MSE reconstruction loss for communication paths.
-        
-        Note: this method only computes the loss value and does not update parameters.
-        Actual parameter updates are performed through the combined loss in train_neural_mas.py.
+
         """
         edge_index = self._build_communication_edge_index()
         timestamps = torch.tensor([episode] * len(self.generated_agents), dtype=torch.float)
