@@ -2,7 +2,6 @@
 Agent Execution Node for Multi-Agent System
 Agent execution node
 
-Adapted from the original Node implementation and optimized for the MetaAgent project.
 Supports time-sensitive memory management and agent interaction.
 """
 
