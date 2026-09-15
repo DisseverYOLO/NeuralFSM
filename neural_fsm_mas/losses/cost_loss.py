@@ -1,6 +1,5 @@
 """
 LLM Cost Loss Function
-LLM cost loss functions
 
 Features:
 1. Compute the LLM call cost for an episode.
