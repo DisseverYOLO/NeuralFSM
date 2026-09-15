@@ -1,8 +1,7 @@
 """
-Neural FSM Multi-Agent System (Neural FSM-MAS)
 Neural finite-state-machine multi-agent system
 
-Fully integrates MetaAgent's FSM generation capability and GDesigner’s TGN learning capability
+
 Supports:
 1. Automatically generating agent roles and state descriptions
 2. Randomly sampling state-transition topology and listening communication topology
@@ -74,7 +73,7 @@ from neural_fsm_mas.losses.cost_loss import (
     estimate_baseline_cost
 )
 
-# ✨ Core integration module (new)
+#  Core integration module 
 from neural_fsm_mas.core_integration import (
     EnhancedFSMIntegration,
     create_enhanced_integration,
@@ -82,13 +81,13 @@ from neural_fsm_mas.core_integration import (
     StateAgentCorrespondenceLearner
 )
 
-# ✨ FSM cache management (new)
+#  FSM cache management 
 from neural_fsm_mas.fsm_cache_manager import (
     FSMCacheManager,
     create_cache_manager
 )
 
-# ✨ Prompt optimization (new) - Experiment 1 only
+#  Prompt optimization 
 from neural_fsm_mas.prompt_optimization import (
     StateDescriptionOptimizer,
     create_prompt_optimizer
@@ -141,9 +140,9 @@ __all__ = [
     'MMLUDataProcessor',
     'create_mmlu_processor',
     'prepare_mmlu_training_data',
-    'UnifiedDataProcessor',  # ✨ Unified data processor (supports all 6 datasets)
-    'AnswerValidator',  # ✨ Answer validator
-    'create_answer_validator',  # ✨ Answer validator factory function
+    'UnifiedDataProcessor',  
+    'AnswerValidator',  
+    'create_answer_validator', 
     
     # Cost tracking
     'LLMCostTracker',
@@ -157,17 +156,17 @@ __all__ = [
     'CostRegularizedLoss',
     'estimate_baseline_cost',
     
-    # ✨ Core integration (new)
+    #  Core integration
     'EnhancedFSMIntegration',
     'create_enhanced_integration',
     'integrate_four_objective_loss',
     'StateAgentCorrespondenceLearner',
     
-    # ✨ FSM cache management (new)
+    # FSM cache management 
     'FSMCacheManager',
     'create_cache_manager',
     
-    # ✨ Prompt optimization (new) - Experiment 1 only
+    #  Prompt optimization 
     'StateDescriptionOptimizer',
     'create_prompt_optimizer',
 ]
