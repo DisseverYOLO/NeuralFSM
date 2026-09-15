@@ -1,6 +1,5 @@
 """
 LLM API Cost Tracker
-LLM API cost tracker
 
 Features:
 1. Maintain the API pricing table for various LLM models
