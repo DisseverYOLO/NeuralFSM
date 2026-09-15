@@ -1,6 +1,5 @@
 """
 Domain Prompts Module
-Domain prompts module
 
 Contains prompt management and role definitions for different domains
 """
