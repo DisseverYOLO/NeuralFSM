@@ -11,9 +11,9 @@ from .prompt_manager import (
     MMLUDomainPromptSet,
     GSM8KDomainPromptSet,
     HumanEvalDomainPromptSet,
-    HotpotQADomainPromptSet,  # ✨ NEW
-    ALFWorldDomainPromptSet,  # ✨ NEW
-    MATHDomainPromptSet       # ✨ NEW
+    HotpotQADomainPromptSet, 
+    ALFWorldDomainPromptSet, 
+    MATHDomainPromptSet      
 )
 
 __all__ = [
@@ -23,7 +23,7 @@ __all__ = [
     'MMLUDomainPromptSet',
     'GSM8KDomainPromptSet',
     'HumanEvalDomainPromptSet',
-    'HotpotQADomainPromptSet',  # ✨ NEW
-    'ALFWorldDomainPromptSet',  # ✨ NEW
-    'MATHDomainPromptSet'       # ✨ NEW
+    'HotpotQADomainPromptSet',  
+    'ALFWorldDomainPromptSet',  
+    'MATHDomainPromptSet'      
 ]
