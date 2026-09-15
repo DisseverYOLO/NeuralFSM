@@ -1,9 +1,6 @@
 ################################################################################
 # NeuralFSM - Git ignore rules
 #
-# User-requested ignores:
-# - datasets/, results/, paper/, docs/
-# - all *.md and *.tex documents (except README.md)
 ################################################################################
 
 # --- User requested folders ---
