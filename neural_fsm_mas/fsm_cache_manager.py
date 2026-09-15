@@ -1,12 +1,10 @@
 """
 FSM Cache Manager
-FSM cache management system
 
 Features:
 1. Save and load pre-generated FSM configurations.
 2. Support version management and cache validation.
-3. Support category-level caching for MMLU.
-4. Automatically generate and update caches.
+3.Automatically generate and update caches.
 
 Directory structure:
 fsm_cache/
