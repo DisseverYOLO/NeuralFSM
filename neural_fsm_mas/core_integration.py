@@ -1,6 +1,5 @@
 """
-Core Integration Module for Enhanced FSM System
-Core integration module that combines all new features
+Core Integration Module for FSM System
 
 This module integrates:
 1. FSM Validation and Optimization
@@ -85,12 +84,12 @@ class EnhancedFSMIntegration:
             avg_calls_per_episode=config.get('avg_calls_per_episode', 5)
         )
         
-        # Four-objective loss function ✨
+        # Four-objective loss function 
         self.loss_fn = CostRegularizedLoss(
             alpha=config.get('alpha', 1.0),      # Policy gradient
             beta=config.get('beta', 0.3),        # State transition
             gamma=config.get('gamma', 0.2),      # Listener path
-            delta=config.get('delta', 0.1),      # LLM cost ✨ NEW
+            delta=config.get('delta', 0.1),      # LLM cost 
             baseline_cost=self.baseline_cost
         )
         
@@ -105,7 +104,7 @@ class EnhancedFSMIntegration:
         print(f"   Loss Weights: α={config.get('alpha', 1.0)}, "
               f"β={config.get('beta', 0.3)}, "
               f"γ={config.get('gamma', 0.2)}, "
-              f"δ={config.get('delta', 0.1)} ✨")
+              f"δ={config.get('delta', 0.1)} ")
     
     def generate_and_validate_fsm(self, 
                                   fsm: Dict[str, Any],
