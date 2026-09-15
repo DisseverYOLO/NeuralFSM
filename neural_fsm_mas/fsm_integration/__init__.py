@@ -1,6 +1,5 @@
 """
 FSM Integration Module
-FSM integration module
 
 Fully integrates MetaAgent's FSM generation capability and TGN learning capability
 """
