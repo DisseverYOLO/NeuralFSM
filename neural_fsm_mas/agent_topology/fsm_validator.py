@@ -1,6 +1,5 @@
 """
 FSM Validator and Optimizer
-FSM validator and optimizer
 
 Features:
 1. Check FSM reachability to ensure final states can be reached.
