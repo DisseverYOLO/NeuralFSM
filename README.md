@@ -1,6 +1,6 @@
 # NeuralFSM: Neural Finite State Machine for Multi-Agent Collaboration and Protection
 
-This repository contains the **NeuralFSM** codebase for training and evaluating a **finite-state, task-conditioned multi-agent coordination** framework with a **Temporal Graph Network (TGN)** controller and an **optional dual-defense protection layer** (robustness under frequency/semantic attacks).
+This repository contains the **NeuralFSM** codebase for training and evaluating a **finite-state, task-conditioned multi-agent coordination** framework with a **Temporal Graph Network (TGN)** controller and an **optional dual-defense protection layer**.
 
 
 ## Project structure
