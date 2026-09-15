@@ -1,5 +1,4 @@
 """
-FSM Executor with Loop Prevention
 FSM executor with loop prevention
 
 Features:
