@@ -1,18 +1,7 @@
 """
 FSM Multi-Agent System Training Script V2
 
-Fully adapted to the new FSM architecture:
-1. One state corresponds to one agent (State -> Agent mapping)
-2. Simultaneously optimize state-transition probabilities
-3. Simultaneously optimize listener communication paths
-4. Use FSMStateManager to manage states
-5. Integrate FSMTemporalGraph to learn optimal topologies
 
-Loss design for three-objective optimization:
-- Combined loss = alpha * policy-gradient loss + beta * state-transition loss + gamma * listener-path loss
-- alpha (policy-gradient weight): 1.0, directly optimizes task accuracy
-- beta (state-transition weight): 0.3, learns optimal state-transition sequences
-- gamma (listener-path weight): 0.2, learns optimal communication paths
 """
 import asyncio
 import argparse
