@@ -1,6 +1,5 @@
 """
 Temporal Networks Module
-Temporal networks module
 
 Contains implementations of neural temporal graph networks
 """
